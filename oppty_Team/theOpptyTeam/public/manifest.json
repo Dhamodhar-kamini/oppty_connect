@@ -1,0 +1,21 @@
+{
+  "short_name": "OpptyChats",
+  "name": "Oppty Chats for Web",
+  "description": "A modern, fast, and secure messaging application.",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#00a884",
+  "background_color": "#f4f6f8"
+}
