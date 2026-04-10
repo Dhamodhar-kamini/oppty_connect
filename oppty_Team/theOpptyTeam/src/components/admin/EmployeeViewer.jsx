@@ -1,4 +1,4 @@
-// src/components/admin/EmployeeViewer.jsx - COMPLETE UPDATED VERSION
+// src/components/admin/EmployeeViewer.jsx - CLEAN & DECENT ORANGE THEME
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
@@ -28,7 +28,6 @@ export default function EmployeeViewer() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('chats');
 
-  // Check if user is admin
   useEffect(() => {
     if (!authUser || (authUser.role !== 'admin' && authUser.role !== 'superadmin')) {
       navigate('/chats');
@@ -37,14 +36,12 @@ export default function EmployeeViewer() {
     fetchEmployeeDashboard();
   }, [employeeId]);
 
-  // Auto-load messages if targetId is in URL
   useEffect(() => {
     if (targetId && employee) {
       fetchMessages(targetId);
     }
   }, [targetId, employeeId]);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -57,13 +54,10 @@ export default function EmployeeViewer() {
     try {
       const data = await adminViewEmployeeDashboard(employeeId);
       setEmployee(data.employee);
-      // ✅ FIX: Ensure contacts is always an array
       setContacts(data.contacts || []);
       
-      // Also fetch groups
       try {
         const groupsData = await adminViewEmployeeGroups(employeeId);
-        // ✅ FIX: Ensure groups is always an array
         setGroups(groupsData.groups || []);
       } catch (e) {
         console.log("No groups or error:", e);
@@ -82,7 +76,6 @@ export default function EmployeeViewer() {
     setSelectedGroup(null);
     try {
       const data = await adminViewEmployeeMessages(employeeId, contactId);
-      // ✅ FIX: Ensure messages is always an array
       setMessages(data.messages || []);
       setSelectedContact(data.chattingWith);
     } catch (err) {
@@ -98,7 +91,6 @@ export default function EmployeeViewer() {
     setSelectedContact(null);
     try {
       const data = await adminViewEmployeeGroupMessages(employeeId, groupId);
-      // ✅ FIX: Ensure messages is always an array
       setMessages(data.messages || []);
       setSelectedGroup(data.group);
     } catch (err) {
@@ -118,7 +110,6 @@ export default function EmployeeViewer() {
     fetchGroupMessages(group.id);
   };
 
-  // ✅ FIX: Log admin exit when going back
   const handleBackToAdmin = async () => {
     try {
       await adminExitEmployeeView(employeeId);
@@ -134,7 +125,6 @@ export default function EmployeeViewer() {
     return date.toLocaleString();
   };
 
-  // ✅ NEW: Format file size
   const formatFileSize = (bytes) => {
     if (!bytes) return "";
     if (bytes < 1024) return bytes + " B";
@@ -144,10 +134,10 @@ export default function EmployeeViewer() {
 
   if (loading) {
     return (
-      <div className="employee-viewer">
+      <div className="viewer-page">
         <div className="viewer-loading">
           <div className="spinner"></div>
-          <p>Loading employee dashboard...</p>
+          <p>Loading employee data...</p>
         </div>
       </div>
     );
@@ -155,132 +145,143 @@ export default function EmployeeViewer() {
 
   if (error) {
     return (
-      <div className="employee-viewer">
+      <div className="viewer-page">
         <div className="viewer-error">
-          <p>⚠️ {error}</p>
-          <button onClick={handleBackToAdmin} className="back-btn">Back to Admin</button>
+          <span className="error-icon">⚠️</span>
+          <h3>Something went wrong</h3>
+          <p>{error}</p>
+          <div className="error-actions">
+            <button onClick={fetchEmployeeDashboard} className="btn-primary">Try Again</button>
+            <button onClick={handleBackToAdmin} className="btn-secondary">Back to Admin</button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="employee-viewer">
+    <div className="viewer-page">
+      {/* Top Bar - Back Button */}
+      <div className="top-bar">
+        <button className="back-btn" onClick={handleBackToAdmin}>
+          ← Back to Admin Dashboard
+        </button>
+      </div>
+
       {/* Header */}
       <header className="viewer-header">
-        <button className="back-btn" onClick={handleBackToAdmin}>
-          ← Back to Admin
-        </button>
-        <div className="viewer-employee-info">
+        <div className="header-employee">
           <img 
             src={employee?.avatarUrl} 
             alt={employee?.name}
             onError={(e) => {
-              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(employee?.name || 'U')}&background=random`;
+              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(employee?.name || 'U')}&background=f97316&color=fff`;
             }}
           />
-          <div>
-            <h2>Viewing: {employee?.name}</h2>
-            <p>{employee?.email} • {employee?.role}</p>
+          <div className="header-employee-info">
+            <h1>{employee?.name}</h1>
+            <p>{employee?.email}</p>
           </div>
+          <span className={`role-badge ${employee?.role}`}>{employee?.role}</span>
         </div>
-        <div className="viewer-badge">
-          <span className="admin-viewing-label">👁️ Admin View Mode</span>
+        <div className="header-badge">
+          <span>👁️ Admin View Mode</span>
         </div>
       </header>
 
+      {/* Main Content */}
       <div className="viewer-content">
-        {/* Sidebar - Contacts & Groups */}
+        {/* Sidebar */}
         <aside className="viewer-sidebar">
-          {/* Tabs */}
-          <div className="viewer-tabs">
+          <div className="sidebar-tabs">
             <button 
               className={`tab-btn ${activeTab === 'chats' ? 'active' : ''}`}
               onClick={() => setActiveTab('chats')}
             >
-              💬 Chats ({contacts.length})
+              Chats ({contacts.length})
             </button>
             <button 
               className={`tab-btn ${activeTab === 'groups' ? 'active' : ''}`}
               onClick={() => setActiveTab('groups')}
             >
-              👥 Groups ({groups.length})
+              Groups ({groups.length})
             </button>
           </div>
 
-          {/* Chats List */}
-          {activeTab === 'chats' && (
-            <div className="viewer-contacts-list">
-              {contacts.length === 0 ? (
-                <div className="empty-list">
-                  <p>No conversations found</p>
-                </div>
-              ) : (
-                contacts.map(contact => (
-                  <div
-                    key={contact.id}
-                    className={`viewer-contact-item ${selectedContact?.id === contact.id ? 'active' : ''}`}
-                    onClick={() => handleContactClick(contact)}
-                  >
-                    <img 
-                      src={contact.avatarUrl} 
-                      alt={contact.name}
-                      onError={(e) => {
-                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(contact.name)}&background=random`;
-                      }}
-                    />
-                    <div className="contact-info">
-                      <div className="contact-name">{contact.name}</div>
-                      <div className="contact-preview">
-                        {contact.lastMessage?.text
-                          ? (contact.lastMessage.text.length > 30 
-                              ? contact.lastMessage.text.substring(0, 30) + "..." 
-                              : contact.lastMessage.text)
-                          : "No messages"
-                        }
-                      </div>
-                    </div>
-                    <div className="contact-meta">
-                      <span className="message-count">{contact.totalMessages} msgs</span>
-                    </div>
+          <div className="sidebar-list">
+            {activeTab === 'chats' && (
+              <>
+                {contacts.length === 0 ? (
+                  <div className="empty-list">
+                    <span>💬</span>
+                    <p>No conversations</p>
                   </div>
-                ))
-              )}
-            </div>
-          )}
+                ) : (
+                  contacts.map(contact => (
+                    <div
+                      key={contact.id}
+                      className={`list-item ${selectedContact?.id === contact.id ? 'active' : ''}`}
+                      onClick={() => handleContactClick(contact)}
+                    >
+                      <img 
+                        src={contact.avatarUrl} 
+                        alt={contact.name}
+                        onError={(e) => {
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(contact.name)}&background=eee&color=333`;
+                        }}
+                      />
+                      <div className="list-item-info">
+                        <span className="list-item-name">{contact.name}</span>
+                        <span className="list-item-preview">
+                          {contact.lastMessage?.text
+                            ? (contact.lastMessage.text.length > 25 
+                                ? contact.lastMessage.text.substring(0, 25) + "..." 
+                                : contact.lastMessage.text)
+                            : "No messages"
+                          }
+                        </span>
+                      </div>
+                      <span className="list-item-count">{contact.totalMessages}</span>
+                    </div>
+                  ))
+                )}
+              </>
+            )}
 
-          {/* Groups List */}
-          {activeTab === 'groups' && (
-            <div className="viewer-contacts-list">
-              {groups.length === 0 ? (
-                <div className="empty-list">
-                  <p>No groups found</p>
-                </div>
-              ) : (
-                groups.map(group => (
-                  <div
-                    key={group.id}
-                    className={`viewer-contact-item ${selectedGroup?.id === group.id ? 'active' : ''}`}
-                    onClick={() => handleGroupClick(group)}
-                  >
-                    <img 
-                      src={group.avatarUrl} 
-                      alt={group.name}
-                      onError={(e) => {
-                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(group.name)}&background=4CAF50`;
-                      }}
-                    />
-                    <div className="contact-info">
-                      <div className="contact-name">{group.name}</div>
-                      <div className="contact-preview">
-                        {group.memberCount} members • {group.employeeMessagesCount || 0} msgs by {employee?.name}
-                      </div>
-                    </div>
+            {activeTab === 'groups' && (
+              <>
+                {groups.length === 0 ? (
+                  <div className="empty-list">
+                    <span>👥</span>
+                    <p>No groups</p>
                   </div>
-                ))
-              )}
-            </div>
-          )}
+                ) : (
+                  groups.map(group => (
+                    <div
+                      key={group.id}
+                      className={`list-item ${selectedGroup?.id === group.id ? 'active' : ''}`}
+                      onClick={() => handleGroupClick(group)}
+                    >
+                      <img 
+                        src={group.avatarUrl} 
+                        alt={group.name}
+                        onError={(e) => {
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(group.name)}&background=f97316&color=fff`;
+                        }}
+                      />
+                      <div className="list-item-info">
+                        <span className="list-item-name">{group.name}</span>
+                        <span className="list-item-preview">
+                          {group.memberCount} members
+                        </span>
+                      </div>
+                      <span className="list-item-count">{group.employeeMessagesCount || 0}</span>
+                    </div>
+                  ))
+                )}
+              </>
+            )}
+          </div>
         </aside>
 
         {/* Messages Panel */}
@@ -292,38 +293,31 @@ export default function EmployeeViewer() {
             </div>
           ) : selectedContact || selectedGroup ? (
             <>
-              <div className="viewer-messages-header">
+              {/* Chat Header */}
+              <div className="chat-header">
                 <img 
                   src={selectedContact?.avatarUrl || selectedGroup?.avatarUrl} 
                   alt={selectedContact?.name || selectedGroup?.name}
                   onError={(e) => {
-                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedContact?.name || selectedGroup?.name || 'U')}&background=random`;
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedContact?.name || selectedGroup?.name || 'U')}&background=eee&color=333`;
                   }}
                 />
-                <div>
-                  <h3>
-                    {selectedContact?.name || selectedGroup?.name}
-                    {selectedGroup && (
-                      <span className="group-badge">Group Chat</span>
-                    )}
-                  </h3>
-                  {selectedContact?.email && (
-                    <span style={{ fontSize: '12px', color: '#667781' }}>{selectedContact.email}</span>
-                  )}
+                <div className="chat-header-info">
+                  <h3>{selectedContact?.name || selectedGroup?.name}</h3>
+                  {selectedGroup && <span className="group-tag">Group</span>}
+                  {selectedContact?.email && <p>{selectedContact.email}</p>}
                 </div>
-                <span className="message-count-header">
-                  {messages.length} messages
-                </span>
+                <span className="msg-count">{messages.length} messages</span>
               </div>
               
-              <div className="viewer-messages-list">
+              {/* Messages List */}
+              <div className="messages-list">
                 {messages.length === 0 ? (
                   <div className="empty-messages">
                     <p>No messages in this conversation</p>
                   </div>
                 ) : (
                   messages.map(msg => {
-                    // ✅ FIX: Handle both response formats
                     const isSent = msg.sender === "me" || msg.isFromViewedEmployee || msg.isMine;
                     const senderName = msg.sender_name || msg.senderName || "Unknown";
                     const senderAvatar = msg.sender_avatar || msg.senderAvatar;
@@ -336,48 +330,38 @@ export default function EmployeeViewer() {
                     const isEdited = msg.isEdited || msg.is_edited;
 
                     return (
-                      <div
-                        key={msg.id}
-                        className={`viewer-message ${isSent ? 'sent' : 'received'}`}
-                      >
-                        <div className="message-avatar">
-                          <img 
-                            src={senderAvatar}
-                            alt={senderName}
-                            onError={(e) => {
-                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=random&size=32`;
-                            }}
-                          />
-                        </div>
-                        <div className="message-content">
-                          <div className="message-sender">
+                      <div key={msg.id} className={`message ${isSent ? 'sent' : 'received'}`}>
+                        <img 
+                          src={senderAvatar}
+                          alt={senderName}
+                          className="message-avatar"
+                          onError={(e) => {
+                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=eee&color=333&size=32`;
+                          }}
+                        />
+                        <div className="message-bubble">
+                          <span className="message-sender">
                             {senderName}
-                            {isSent && (
-                              <span className="viewed-employee-tag"> ({employee?.name})</span>
-                            )}
-                          </div>
+                            {isSent && <span className="employee-tag"> ({employee?.name})</span>}
+                          </span>
                           
-                          {/* Deleted message */}
                           {isDeleted ? (
-                            <div className="message-text" style={{ fontStyle: 'italic', color: '#667781' }}>
-                              🚫 This message was deleted
-                            </div>
+                            <p className="message-text deleted">🚫 This message was deleted</p>
                           ) : (
                             <>
-                              {/* File Preview */}
                               {fileUrl && (
                                 <div className="message-file">
                                   {msgType === 'image' ? (
                                     <img 
                                       src={fileUrl} 
                                       alt={fileName || "Image"} 
-                                      className="message-image"
+                                      className="file-image"
                                       onClick={() => window.open(fileUrl, '_blank')}
                                     />
                                   ) : msgType === 'video' ? (
-                                    <video controls src={fileUrl} style={{ maxWidth: '200px', borderRadius: '8px' }} />
+                                    <video controls src={fileUrl} className="file-video" />
                                   ) : msgType === 'audio' ? (
-                                    <audio controls src={fileUrl} style={{ maxWidth: '200px' }} />
+                                    <audio controls src={fileUrl} className="file-audio" />
                                   ) : (
                                     <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="file-link">
                                       📎 {fileName || "File"} {msg.fileSize ? `(${formatFileSize(msg.fileSize)})` : ''}
@@ -386,62 +370,35 @@ export default function EmployeeViewer() {
                                 </div>
                               )}
 
-                              {/* Meet message */}
                               {msgType === 'meet' && msg.meetLink && (
-                                <div style={{
-                                  background: 'linear-gradient(135deg, #1a73e8, #4285f4)',
-                                  borderRadius: '8px',
-                                  padding: '10px',
-                                  color: '#fff',
-                                  marginBottom: '4px'
-                                }}>
-                                  <div style={{ fontWeight: 700, marginBottom: '4px' }}>
-                                    📅 {msg.meetTitle || "Meeting"}
-                                  </div>
+                                <div className="message-meet">
+                                  <div className="meet-title">📅 {msg.meetTitle || "Meeting"}</div>
                                   {msg.meetScheduledAt && (
-                                    <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '6px' }}>
-                                      🕐 {new Date(msg.meetScheduledAt).toLocaleString()}
-                                    </div>
+                                    <div className="meet-time">🕐 {new Date(msg.meetScheduledAt).toLocaleString()}</div>
                                   )}
-                                  <a 
-                                    href={msg.meetLink} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    style={{
-                                      display: 'inline-block',
-                                      background: '#fff',
-                                      color: '#1a73e8',
-                                      padding: '6px 12px',
-                                      borderRadius: '6px',
-                                      textDecoration: 'none',
-                                      fontSize: '13px',
-                                      fontWeight: 600
-                                    }}
-                                  >
-                                    🎥 Open Meeting Link
+                                  <a href={msg.meetLink} target="_blank" rel="noopener noreferrer" className="meet-link">
+                                    🎥 Join Meeting
                                   </a>
                                 </div>
                               )}
                               
-                              {/* Text Content */}
                               {messageText && msgType !== 'meet' && (
-                                <div className="message-text">{messageText}</div>
+                                <p className="message-text">{messageText}</p>
                               )}
                             </>
                           )}
                           
-                          {/* Reactions */}
                           {Object.keys(msgReactions).length > 0 && !isDeleted && (
-                            <div className="message-reactions-display">
+                            <div className="message-reactions">
                               {msgReactions.ok > 0 && <span>👍 {msgReactions.ok}</span>}
                               {msgReactions.not_ok > 0 && <span>👎 {msgReactions.not_ok}</span>}
                             </div>
                           )}
                           
-                          <div className="message-time">
-                            {isEdited && <span style={{ fontStyle: 'italic', marginRight: '4px' }}>edited</span>}
+                          <span className="message-time">
+                            {isEdited && <em>edited · </em>}
                             {formatTime(msg.createdAt)}
-                          </div>
+                          </span>
                         </div>
                       </div>
                     );
@@ -450,17 +407,18 @@ export default function EmployeeViewer() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="viewer-messages-footer">
-                <span className="admin-notice">
-                  ⚠️ You are viewing this conversation as an admin. You cannot send messages.
-                </span>
+              {/* Footer Notice */}
+              <div className="chat-footer">
+                <div className="admin-notice">
+                  ⚠️ Admin view mode — You cannot send messages
+                </div>
               </div>
             </>
           ) : (
-            <div className="viewer-empty">
+            <div className="empty-panel">
               <span className="empty-icon">💬</span>
-              <p>Select a conversation to view messages</p>
-              <span className="hint">Click on a chat or group from the left panel</span>
+              <h3>Select a conversation</h3>
+              <p>Click on a chat or group from the sidebar</p>
             </div>
           )}
         </main>

@@ -1,4 +1,4 @@
-// src/components/admin/AdminDashboard.jsx - COMPLETE UPDATED VERSION
+// src/components/admin/AdminDashboard.jsx - CLEAN & DECENT
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminGetAllEmployees, adminGetStatistics } from "../../utils/api.js";
@@ -14,7 +14,6 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const authUser = getAuthUser();
 
-  // Check if user is admin
   useEffect(() => {
     if (!authUser || (authUser.role !== 'admin' && authUser.role !== 'superadmin')) {
       navigate('/chats');
@@ -29,7 +28,6 @@ export default function AdminDashboard() {
     setError(null);
     try {
       const data = await adminGetAllEmployees();
-      // ✅ FIX: Backend now returns { employees: [...], totalCount, adminId, adminName }
       setEmployees(data.employees || data);
     } catch (err) {
       console.error("Error fetching employees:", err);
@@ -79,7 +77,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="admin-dashboard">
+      <div className="admin-page">
         <div className="admin-loading">
           <div className="spinner"></div>
           <p>Loading employees...</p>
@@ -90,116 +88,110 @@ export default function AdminDashboard() {
 
   if (error) {
     return (
-      <div className="admin-dashboard">
+      <div className="admin-page">
         <div className="admin-error">
-          <p>⚠️ {error}</p>
-          <button onClick={fetchEmployees} className="retry-btn">Retry</button>
-          <button onClick={handleBackToChats} className="back-btn">Back to Chats</button>
+          <span className="error-icon">⚠️</span>
+          <p>{error}</p>
+          <div className="error-actions">
+            <button onClick={fetchEmployees} className="btn-primary">Try Again</button>
+            <button onClick={handleBackToChats} className="btn-secondary">Back to Chats</button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="admin-dashboard">
+    <div className="admin-page">
+      {/* Back Navigation */}
+      <div className="top-bar">
+        <button className="back-btn" onClick={handleBackToChats}>
+          ← Back to Chats
+        </button>
+      </div>
+
       {/* Header */}
       <header className="admin-header">
-        <div className="admin-header-left">
-          <button className="back-to-chats-btn" onClick={handleBackToChats}>
-            ← Back to Chats
-          </button>
-          <div className="admin-title">
-            <h1>👨‍💼 Admin Dashboard</h1>
-            <p>View and monitor employee conversations</p>
-          </div>
+        <div className="header-left">
+          <h1>Admin Dashboard</h1>
+          <p>Monitor employee conversations</p>
         </div>
-        <div className="admin-header-right">
-          {/* ✅ NEW: Show statistics if available */}
+        <div className="header-right">
           {statistics && (
-            <div className="admin-stats-bar">
-              <span className="stat-chip" title="Total Messages">
-                💬 {statistics.totalMessages || 0}
-              </span>
-              <span className="stat-chip" title="Messages Today">
-                📅 {statistics.messagesToday || 0} today
-              </span>
-              <span className="stat-chip" title="Total Groups">
-                👥 {statistics.totalGroups || 0} groups
-              </span>
+            <div className="stats-row">
+              <div className="stat-pill">
+                <span>💬</span> {statistics.totalMessages || 0}
+              </div>
+              <div className="stat-pill">
+                <span>📅</span> {statistics.messagesToday || 0} today
+              </div>
+              <div className="stat-pill">
+                <span>👥</span> {statistics.totalGroups || 0} groups
+              </div>
             </div>
           )}
-          <span className="employee-count">{employees.length} Employees</span>
-          <button className="refresh-btn" onClick={() => { fetchEmployees(); fetchStatistics(); }} title="Refresh">
-            🔄
+          <div className="stat-pill highlight">{employees.length} Employees</div>
+          <button className="refresh-btn" onClick={() => { fetchEmployees(); fetchStatistics(); }}>
+            ↻
           </button>
         </div>
       </header>
 
       {/* Search */}
-      <div className="admin-search-container">
+      <div className="search-bar">
         <input
           type="text"
-          className="admin-search"
-          placeholder="🔍 Search employees by name or email..."
+          placeholder="🔍 Search employees..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+        {searchTerm && (
+          <button className="clear-btn" onClick={() => setSearchTerm("")}>✕</button>
+        )}
       </div>
 
-      {/* Employee Grid */}
+      {/* Employee List */}
       <div className="employee-grid">
         {filteredEmployees.map(emp => (
-          <div
-            key={emp.id}
-            className="employee-card"
-            onClick={() => handleViewEmployee(emp.id)}
-          >
-            <div className="employee-card-header">
+          <div key={emp.id} className="employee-card" onClick={() => handleViewEmployee(emp.id)}>
+            <div className="card-header">
               <img 
                 src={emp.avatarUrl} 
                 alt={emp.name} 
-                className="employee-avatar"
+                className="avatar"
                 onError={(e) => {
-                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random`;
+                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=f97316&color=fff`;
                 }}
               />
-              <div className="employee-basic-info">
+              <div className="info">
                 <h3>{emp.name}</h3>
-                <p className="employee-email">{emp.email}</p>
-                <span className={`employee-role ${emp.role}`}>{emp.role}</span>
+                <p>{emp.email}</p>
+                <span className={`role ${emp.role}`}>{emp.role}</span>
               </div>
             </div>
 
-            <div className="employee-stats">
+            <div className="card-stats">
               <div className="stat">
-                <span className="stat-icon">📤</span>
-                <span className="stat-value">{emp.stats?.messagesSent || 0}</span>
-                <span className="stat-label">Sent</span>
+                <span className="value">{emp.stats?.messagesSent || 0}</span>
+                <span className="label">Sent</span>
               </div>
               <div className="stat">
-                <span className="stat-icon">📥</span>
-                <span className="stat-value">{emp.stats?.messagesReceived || 0}</span>
-                <span className="stat-label">Received</span>
+                <span className="value">{emp.stats?.messagesReceived || 0}</span>
+                <span className="label">Received</span>
               </div>
               <div className="stat">
-                <span className="stat-icon">💬</span>
-                <span className="stat-value">{emp.stats?.activeChatPartners || 0}</span>
-                <span className="stat-label">Chats</span>
+                <span className="value">{emp.stats?.activeChatPartners || 0}</span>
+                <span className="label">Chats</span>
               </div>
               <div className="stat">
-                <span className="stat-icon">👥</span>
-                <span className="stat-value">{emp.stats?.groupsJoined || 0}</span>
-                <span className="stat-label">Groups</span>
+                <span className="value">{emp.stats?.groupsJoined || 0}</span>
+                <span className="label">Groups</span>
               </div>
             </div>
 
-            <div className="employee-card-footer">
-              <span className="last-activity">
-                Last active: {formatLastActivity(emp.lastActivity)}
-              </span>
-              <button className="view-btn">
-                View Chats →
-              </button>
+            <div className="card-footer">
+              <span className="activity">Last: {formatLastActivity(emp.lastActivity)}</span>
+              <button className="view-btn">View →</button>
             </div>
           </div>
         ))}
@@ -207,13 +199,11 @@ export default function AdminDashboard() {
 
       {/* Empty State */}
       {filteredEmployees.length === 0 && (
-        <div className="admin-empty">
-          <span className="empty-icon">👤</span>
+        <div className="empty-state">
+          <span>👤</span>
           <p>No employees found</p>
           {searchTerm && (
-            <button onClick={() => setSearchTerm("")} className="clear-search-btn">
-              Clear search
-            </button>
+            <button onClick={() => setSearchTerm("")}>Clear Search</button>
           )}
         </div>
       )}
