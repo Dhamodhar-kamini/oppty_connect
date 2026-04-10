@@ -1,0 +1,172 @@
+/* src/components/chat/FileUpload.css */
+
+/* File Upload Button */
+.file-upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #54656f;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.file-upload-btn:hover:not(:disabled) {
+  background: #f0f2f5;
+  color: #00a884;
+}
+
+.file-upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* File Preview in Messages */
+.file-preview-image {
+  max-width: 280px;
+  margin-bottom: 4px;
+}
+
+.file-preview-image img {
+  width: 100%;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.file-preview-image img:hover {
+  transform: scale(1.02);
+}
+
+.file-preview-video {
+  max-width: 280px;
+  margin-bottom: 4px;
+}
+
+.file-preview-video video {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.file-preview-audio {
+  max-width: 280px;
+  margin-bottom: 4px;
+}
+
+.file-preview-audio audio {
+  width: 100%;
+}
+
+.file-preview-generic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.2s;
+}
+
+.file-preview-generic:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.file-icon {
+  font-size: 32px;
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111b21;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  font-size: 12px;
+  color: #667781;
+  margin-top: 2px;
+}
+
+.file-download {
+  font-size: 18px;
+  color: #00a884;
+}
+
+/* Upload Progress */
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f0f2f5;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.upload-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: #e9edef;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background: #00a884;
+  transition: width 0.3s ease;
+}
+
+.upload-progress-text {
+  font-size: 12px;
+  color: #667781;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Drag & Drop Overlay */
+.drag-drop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 168, 132, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  color: #fff;
+}
+
+.drag-drop-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.drag-drop-text {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.drag-drop-hint {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-top: 8px;
+}
