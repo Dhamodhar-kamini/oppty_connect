@@ -408,3 +408,658 @@
   }
 }
 
+/* ── Password input wrapper ───────────────────────── */
+.auth-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-password-wrapper input {
+  width: 100%;
+  padding-right: 44px !important;
+}
+
+.auth-eye-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  line-height: 1;
+  color: #667781;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-eye-btn:hover {
+  color: #111b21;
+}
+
+/* ── Step indicator ───────────────────────────────── */
+.auth-step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 20px;
+  gap: 0;
+}
+
+.auth-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f0f2f5;
+  color: #8696a0;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.auth-step-dot.active {
+  background: #ff6b00;
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2);
+}
+
+.auth-step-dot.done {
+  background: #10b981;
+  color: #fff;
+}
+
+.auth-step-line {
+  flex: 1;
+  height: 2px;
+  background: #e9edef;
+  max-width: 36px;
+  transition: background 0.3s ease;
+}
+
+.auth-step-line.done {
+  background: #10b981;
+}
+
+/* ── Password strength ───────────────────────────── */
+.auth-password-strength {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-strength-bars {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.auth-strength-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+/* ── Resend OTP disabled state ───────────────────── */
+.resend-otp-btn:disabled {
+  color: #8696a0;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+.employee-login-page {
+  min-height: 100vh;
+  /* background: linear-gradient(135deg, #fff7f2 0%, #fff 45%, #fff3ea 100%); */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.employee-login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border: 1px solid #f0e3d9;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(17, 27, 33, 0.08);
+  padding: 28px;
+}
+
+.employee-login-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.employee-login-header h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+  font-weight: 800;
+  color: #111b21;
+}
+
+.employee-login-header p {
+  margin: 0;
+  color: #667781;
+  font-size: 14px;
+}
+
+.employee-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-input-group label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111b21;
+}
+
+.auth-input-group input {
+  width: 100%;
+  height: 46px;
+  border: 1px solid #d9dee2;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+  color: #111b21;
+}
+
+.auth-input-group input:focus {
+  border-color: #ff6b00;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
+}
+
+.auth-primary-btn,
+.auth-secondary-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-primary-btn {
+  background: #ff6b00;
+  color: #fff;
+}
+
+.auth-primary-btn:hover {
+  background: #e96000;
+}
+
+.auth-secondary-btn {
+  background: #f2f4f5;
+  color: #111b21;
+}
+
+.auth-secondary-btn:hover {
+  background: #e8ebec;
+}
+
+.forgot-password-btn {
+  border: none;
+  background: transparent;
+  color: #ff6b00;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.auth-error-msg {
+  background: #fff1f0;
+  color: #d93025;
+  border: 1px solid #ffd8d4;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.auth-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 27, 33, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 9999;
+}
+
+.auth-popup-card {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(17, 27, 33, 0.18);
+  padding: 20px;
+  animation: authPopupIn 0.22s ease;
+}
+
+.auth-popup-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.auth-popup-top h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #111b21;
+}
+
+.auth-close-btn {
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: #f5f6f6;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #111b21;
+}
+
+.auth-popup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.auth-popup-desc {
+  margin: 0;
+  font-size: 14px;
+  color: #667781;
+  line-height: 1.5;
+}
+
+.auth-popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.auth-popup-actions-center {
+  justify-content: center;
+}
+
+.auth-demo-otp {
+  background: #fff5ed;
+  border: 1px dashed #ff6b00;
+  color: #111b21;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.auth-success-body {
+  text-align: center;
+  align-items: center;
+}
+
+.auth-success-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #e9fff1;
+  color: #1aa251;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 900;
+  margin: 4px auto 6px;
+}
+
+.company-login-logo.opptyLogo {
+  width: 180px;
+  height: 40px;
+}
+
+@keyframes authPopupIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 480px) {
+  .employee-login-card {
+    padding: 22px 18px;
+    border-radius: 18px;
+  }
+
+  .employee-login-header h1 {
+    font-size: 26px;
+  }
+
+  .auth-popup-card {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .auth-popup-top h2 {
+    font-size: 22px;
+  }
+
+  .auth-popup-actions {
+    flex-direction: column;
+  }
+
+  .auth-primary-btn,
+  .auth-secondary-btn {
+    width: 100%;
+  }
+}
+
+
+.company-login-logo {
+  width: 120px;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto 14px;
+  display: block;
+}
+
+.auth-success-msg {
+  background: #edfdf3;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.resend-otp-btn {
+  border: none;
+  background: transparent;
+  color: #ff6b00;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-start;
+  padding: 0;
+}
+
+.resend-otp-btn:hover {
+  text-decoration: underline;
+}
+
+
+
+
+.logout-loader-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 12000;
+}
+
+.logout-loader-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: loaderFadeIn 0.25s ease;
+}
+
+.logo-spinner-wrap {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.logo-ring-spinner {
+  position: absolute;
+  inset: 0;
+}
+
+.logo-ring-spinner span {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  animation: spinCircle linear infinite;
+}
+
+.logo-ring-spinner span:nth-child(1) {
+  inset: 0;
+  border-top-color: #ff6b00;
+  border-right-color: rgba(255, 107, 0, 0.25);
+  animation-duration: 1.2s;
+}
+
+.logo-ring-spinner span:nth-child(2) {
+  inset: 12px;
+  border-top-color: #ff9248;
+  border-left-color: rgba(255, 146, 72, 0.22);
+  animation-duration: 1.8s;
+  animation-direction: reverse;
+}
+
+.logo-ring-spinner span:nth-child(3) {
+  inset: 24px;
+  border-top-color: #ffc08f;
+  border-bottom-color: rgba(255, 192, 143, 0.22);
+  animation-duration: 2.3s;
+}
+
+.logo-spinner-center {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(17, 27, 33, 0.08);
+  position: relative;
+  z-index: 2;
+}
+
+.logout-loader-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+.logout-loader-title {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #111b21;
+}
+
+.logout-loader-text {
+  margin: 0;
+  font-size: 14px;
+  color: #667781;
+}
+
+@keyframes spinCircle {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loaderFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ========================================================= */
+/* HOLLYWOOD BRIGHT MODE SPLASH SCREEN                       */
+/* ========================================================= */
+
+.hollywood-bright-splash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #ffffff; /* Bright, clean white */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  overflow: hidden;
+  /* Final fade out to reveal the login screen cleanly */
+  animation: brightFadeOut 0.8s ease-in-out 4.8s forwards; 
+}
+
+/* Soft studio backlighting to make it feel premium */
+.hollywood-studio-lights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 30%, #ffffff 0%, #f0f0f0 60%, #e4e4e4 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Stage 1: The "Presents" Text */
+.hollywood-presents {
+  position: absolute;
+  top: 42%;
+  color: #888888;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  opacity: 0;
+  z-index: 2;
+  /* Fades in, stays brief, fades out */
+  animation: brightPresentsSequence 2.2s ease-in-out forwards;
+}
+
+/* Stage 2: The Main Event */
+.hollywood-main-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: absolute;
+  opacity: 0;
+  z-index: 3;
+  /* Wait for Presents to finish, then reveal */
+  animation: brightMainReveal 3.5s cubic-bezier(0.2, 0.8, 0.2, 1) 2.0s forwards;
+}
+
+.hollywood-logo-wrapper {
+  position: relative;
+  overflow: hidden;
+  padding: 20px; /* Give room for drop shadows */
+}
+
+.hollywood-logo {
+  width: 170px;
+  height: auto;
+  /* Deep shadow to stand out against the bright background */
+  filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.15)); 
+}
+
+/* Sweeping bright golden/white sunlight glint */
+.hollywood-sun-glint {
+  position: absolute;
+  top: -50%;
+  left: -150%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 245, 230, 0.9) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: skewX(-35deg);
+  /* Glint sweeps across right as it comes into focus */
+  animation: sunGlintSweep 2s ease-in-out 2.8s forwards;
+}
+
+.hollywood-title-wrapper {
+  position: relative;
+  margin-top: 15px;
+  overflow: hidden;
+}
+
+.hollywood-title {
+  color: #222222; /* Very dark grey, softer than pure black */
+  font-family: inherit;
+  font-size: 2rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  opacity: 0;
+  margin: 0;
+  /* Classic Hollywood tracking expand with a focus pull (blur to sharp) */
+  animation: hollywoodTitleSlam 3s cubic-bezier(0.1, 0.9, 0.2, 1) 2.4s forwards;
+}
+
+/* --- KEYFRAMES --- */
+
+@keyframes brightPresentsSequence {
+  0% { opacity: 0; transform: scale(0.95); }
+  30% { opacity: 1; transform: scale(1); }
+  70% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+@keyframes brightMainReveal {
+  /* Starts slightly large and blurred (Focus Pull Effect) */
+  0% { opacity: 0; transform: scale(1.2); filter: blur(10px); }
+  40% { opacity: 1; transform: scale(1); filter: blur(0px); }
+  100% { opacity: 1; transform: scale(1.05); filter: blur(0px); }
+}
+
+@keyframes sunGlintSweep {
+  0% { left: -150%; }
+  100% { left: 200%; }
+}
+
+@keyframes hollywoodTitleSlam {
+  0% { opacity: 0; letter-spacing: 0px; filter: blur(8px); transform: translateY(-10px); }
+  30% { opacity: 1; filter: blur(0px); transform: translateY(0); }
+  100% { opacity: 1; letter-spacing: 22px; filter: blur(0px); transform: translateY(0); }
+}
+
+@keyframes brightFadeOut {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.05); visibility: hidden; }
+}

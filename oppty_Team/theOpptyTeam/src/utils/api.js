@@ -327,3 +327,39 @@ export function getWebSocketUrl(targetId, isGroup = false) {
     return `${wsProtocol}//${wsHost}/ws/chat/${cleanId}/`;
   }
 }
+// ==================== POLLS ====================
+
+export async function createPoll({ question, options, allowMultiple, receiverId, groupId }) {
+  const response = await apiFetch("/api/polls/create/", {
+    method: "POST",
+    body: JSON.stringify({
+      question,
+      options,
+      allow_multiple: allowMultiple,
+      receiver_id: receiverId || null,
+      group_id: groupId || null,
+    }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Failed to create poll");
+  return result;
+}
+
+export async function votePoll(pollId, optionId) {
+  const response = await apiFetch(`/api/polls/${pollId}/vote/`, {
+    method: "POST",
+    body: JSON.stringify({ option_id: optionId }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Failed to vote");
+  return result;
+}
+
+export async function getPollResults(pollId) {
+  const response = await apiFetch(`/api/polls/${pollId}/results/`, {
+    method: "GET",
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Failed to get poll results");
+  return result;
+}

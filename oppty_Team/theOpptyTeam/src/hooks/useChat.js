@@ -33,6 +33,80 @@ export function useChat(chatId, isGroup = false) {
     }
   }, [getCleanId, isGroup, authUser]);
 
+  // ===== NORMALIZE any message into a consistent shape =====
+  const normalizeMessage = useCallback((m, source = "unknown") => {
+    // Determine isMine consistently
+    let isMine;
+    if (m.isMine !== undefined && m.isMine !== null) {
+      isMine = m.isMine;
+    } else if (m.sender === "me") {
+      isMine = true;
+    } else if (m.sender === "them") {
+      isMine = false;
+    } else if (m.sender_id) {
+      isMine = Number(m.sender_id) === Number(myId);
+    } else {
+      isMine = false;
+    }
+
+    // Determine type consistently
+    const msgType = m.type || m.messageType || m.message_type || "text";
+
+    const normalized = {
+      id: m.id,
+      text: m.text || m.content || m.message || "",
+      isMine,
+      sender: isMine ? "me" : "them",
+      senderId: m.sender_id || m.senderId,
+      senderName: m.sender_name || m.senderName || "",
+      senderAvatar: m.sender_avatar || m.senderAvatar || "",
+      createdAt: m.createdAt
+        ? (typeof m.createdAt === "number" ? m.createdAt : new Date(m.createdAt).getTime())
+        : Date.now(),
+
+      // Type fields — always set both
+      type: msgType,
+      messageType: msgType,
+
+      // File fields
+      fileUrl: m.fileUrl || m.file_url || null,
+      fileName: m.fileName || m.file_name || null,
+      fileSize: m.fileSize || m.file_size || null,
+
+      // Meet fields
+      meetLink: m.meetLink || m.meet_link || null,
+      meetTitle: m.meetTitle || m.meet_title || null,
+      meetScheduledAt: m.meetScheduledAt || m.meet_scheduled_at || null,
+
+      // Interaction fields
+      reactions: m.reactions || {},
+      userReaction: m.userReaction || null,
+      isEdited: m.isEdited || false,
+      canEdit: m.canEdit !== undefined ? m.canEdit : isMine,
+      canDeleteForEveryone: m.canDeleteForEveryone !== undefined ? m.canDeleteForEveryone : isMine,
+      isRead: m.isRead || false,
+      isDeleted: m.isDeleted || false,
+      deletedForAll: m.deletedForEveryone || m.deletedForAll || false,
+      deletedForEveryone: m.deletedForEveryone || m.deletedForAll || false,
+      replyTo: m.replyTo || null,
+      myInviteStatus: m.myInviteStatus || null,
+      isStarred: m.isStarred || false,
+      isPinned: m.isPinned || false,
+      thread: m.thread || [],
+      status: m.isRead ? "read" : (isMine ? "sent" : undefined),
+
+      // ===== POLL FIELDS — the key fix =====
+      pollQuestion: m.pollQuestion || null,
+      pollOptions: m.pollOptions || null,
+      pollId: m.pollId || null,
+      myVotes: m.myVotes || [],
+      allowMultiple: m.allowMultiple || false,
+      totalVotes: m.totalVotes || 0,
+    };
+
+    return normalized;
+  }, [myId]);
+
   const handleWebSocketMessage = useCallback((payload) => {
     const { type, data } = payload;
 
@@ -42,42 +116,9 @@ export function useChat(chatId, isGroup = false) {
         setMessages(prev => {
           if (prev.find(m => m.id === data.id)) return prev;
 
-          const isMineMessage = Number(data.sender_id) === Number(myId);
+          const newMsg = normalizeMessage(data, "websocket");
 
-          const newMsg = {
-            id: data.id,
-            text: data.text || data.message || "",
-            isMine: isMineMessage,
-            senderId: data.sender_id,
-            senderName: data.sender_name,
-            senderAvatar: data.sender_avatar,
-            createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
-            
-            // ✅ FIX: Ensure all media and meeting properties are captured perfectly
-            type: data.messageType || data.message_type || "text",
-            messageType: data.messageType || data.message_type || "text",
-            fileUrl: data.fileUrl || data.file_url || null,
-            fileName: data.fileName || data.file_name || null,
-            fileSize: data.fileSize || data.file_size || null,
-            
-            meetLink: data.meetLink || data.meet_link || null,
-            meetTitle: data.meetTitle || data.meet_title || null,
-            meetScheduledAt: data.meetScheduledAt || data.meet_scheduled_at || null,
-            
-            reactions: data.reactions || {},
-            userReaction: data.userReaction,
-            isEdited: data.isEdited || false,
-            canEdit: isMineMessage,
-            canDeleteForEveryone: isMineMessage,
-            isRead: data.isRead || false,
-            replyTo: data.replyTo,
-            isStarred: false,
-            isPinned: false,
-            thread: [],
-            status: isMineMessage ? "sent" : undefined,
-          };
-
-          if (isMineMessage) {
+          if (newMsg.isMine) {
             const withoutTemp = prev.filter(m => {
               if (String(m.id).startsWith("temp-") && m.text === newMsg.text) return false;
               return true;
@@ -118,7 +159,9 @@ export function useChat(chatId, isGroup = false) {
               return {
                 ...m, text: "🚫 This message was deleted",
                 isDeleted: true, deletedForAll: true, deletedForEveryone: true,
-                fileUrl: null, fileName: null, meetLink: null
+                type: "text", messageType: "text",
+                fileUrl: null, fileName: null, meetLink: null,
+                pollOptions: null, pollQuestion: null, pollId: null,
               };
             }
             return m;
@@ -164,10 +207,27 @@ export function useChat(chatId, isGroup = false) {
         }
         break;
 
+      case "poll_update":
+        // Dispatch custom event for ChatPage to handle
+        window.dispatchEvent(new CustomEvent("poll_update", { detail: data }));
+        // Also update local messages directly
+        setMessages(prev => prev.map(m => {
+          if (m.id === data.message_id) {
+            return {
+              ...m,
+              pollOptions: data.pollOptions || m.pollOptions,
+              myVotes: data.myVotes || m.myVotes,
+              totalVotes: data.totalVotes !== undefined ? data.totalVotes : m.totalVotes,
+            };
+          }
+          return m;
+        }));
+        break;
+
       default:
         break;
     }
-  }, [myId]);
+  }, [myId, normalizeMessage]);
 
   const {
     connectionStatus,
@@ -197,41 +257,8 @@ export function useChat(chatId, isGroup = false) {
           data = await fetchMessages(cleanId);
         }
 
-        const formatted = (data || []).map(m => ({
-          id: m.id,
-          text: m.text || "",
-          isMine: m.sender === "me" || m.isMine || Number(m.sender_id) === Number(myId),
-          senderId: m.sender_id,
-          senderName: m.sender_name,
-          senderAvatar: m.sender_avatar,
-          createdAt: new Date(m.createdAt).getTime(),
-          
-          // ✅ FIX: Extracting standard properties correctly on initial load
-          type: m.messageType || m.message_type || "text",
-          messageType: m.messageType || m.message_type || "text",
-          fileUrl: m.fileUrl || m.file_url,
-          fileName: m.fileName || m.file_name,
-          fileSize: m.fileSize || m.file_size,
-          meetLink: m.meetLink || m.meet_link,
-          meetTitle: m.meetTitle || m.meet_title,
-          meetScheduledAt: m.meetScheduledAt || m.meet_scheduled_at,
-          
-          reactions: m.reactions || {},
-          userReaction: m.userReaction,
-          isEdited: m.isEdited || false,
-          canEdit: m.canEdit || false,
-          canDeleteForEveryone: m.canDeleteForEveryone || false,
-          isRead: m.isRead || false,
-          isDeleted: m.isDeleted || false,
-          deletedForAll: m.deletedForEveryone || false,
-          deletedForEveryone: m.deletedForEveryone || false,
-          replyTo: m.replyTo,
-          myInviteStatus: m.myInviteStatus,
-          isStarred: m.isStarred || false,
-          isPinned: m.isPinned || false,
-          thread: m.thread || [],
-          status: m.isRead ? "read" : "sent",
-        }));
+        // Use the same normalizeMessage for REST API data
+        const formatted = (data || []).map(m => normalizeMessage(m, "rest"));
 
         setMessages(formatted);
       } catch (err) {
@@ -248,7 +275,7 @@ export function useChat(chatId, isGroup = false) {
     return () => {
       Object.values(typingUsersTimeoutRef.current).forEach(clearTimeout);
     };
-  }, [chatId, isGroup, myId, getCleanId]);
+  }, [chatId, isGroup, myId, getCleanId, normalizeMessage]);
 
   const sendTextMessage = useCallback((text, replyTo = null) => {
     if (!text.trim() || !isConnected) return false;
@@ -269,27 +296,13 @@ export function useChat(chatId, isGroup = false) {
 
       const result = await uploadMessageFile(file, targetId, groupId, content);
 
-      const newMessage = {
-        id: result.id,
-        text: result.text || "",
+      const newMessage = normalizeMessage({
+        ...result,
         isMine: true,
         senderName: authUser?.name,
         senderAvatar: authUser?.avatarUrl,
-        createdAt: new Date(result.createdAt).getTime(),
-        type: result.messageType || result.message_type,
-        messageType: result.messageType || result.message_type,
-        fileUrl: result.fileUrl || result.file_url,
-        fileName: result.fileName || result.file_name,
-        fileSize: result.fileSize || result.file_size,
-        reactions: {},
-        userReaction: null,
-        canEdit: false,
-        canDeleteForEveryone: true,
-        isRead: false,
-        isStarred: false,
-        isPinned: false,
-        thread: [],
-      };
+        sender_id: myId,
+      }, "upload");
 
       setMessages(prev => {
         if (prev.find(m => m.id === result.id)) return prev;
@@ -301,7 +314,7 @@ export function useChat(chatId, isGroup = false) {
       console.error("File upload error:", err);
       throw err;
     }
-  }, [getCleanId, isGroup, authUser]);
+  }, [getCleanId, isGroup, authUser, myId, normalizeMessage]);
 
   const sendTypingIndicator = useCallback((isTyping = true) => {
     wsSendTyping(isTyping);

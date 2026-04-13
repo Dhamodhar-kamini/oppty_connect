@@ -40,22 +40,6 @@ function NewChatIcon() {
   );
 }
 
-function SearchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-      <path fill="currentColor" d="M15.009 13.805h-.636l-.22-.219a5.184 5.184 0 0 0 1.256-3.386 5.207 5.207 0 1 0-5.207 5.208 5.183 5.183 0 0 0 3.385-1.255l.221.22v.635l4.004 3.999 1.194-1.195-3.997-4.007zm-4.808 0a3.605 3.605 0 1 1 0-7.21 3.605 3.605 0 0 1 0 7.21z" />
-    </svg>
-  );
-}
-
-function StarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-      <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-    </svg>
-  );
-}
-
 function AddUserIcon() {
   return (
     <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
@@ -95,9 +79,6 @@ export default function Sidebar({ isChatOpen }) {
   const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [activeDrawer, setActiveDrawer] = useState("none");
-  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
-  const [globalSearchFilter, setGlobalSearchFilter] = useState("all");
   const [contacts, setContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
 
@@ -131,7 +112,6 @@ export default function Sidebar({ isChatOpen }) {
   const fileInputRef = useRef(null);
   const createPopupRef = useRef(null);
   const createBtnRef = useRef(null);
-  const drawerRef = useRef(null);
 
   // Navigation items
   const navItems = useMemo(() => {
@@ -172,55 +152,10 @@ export default function Sidebar({ isChatOpen }) {
     );
   }, [contacts, contactSearchTerm]);
 
-  // Starred messages
-  const starredMessages = useMemo(() => {
-    let results = [];
-    chats.forEach((c) => {
-      (c.messages || []).forEach((m) => {
-        if (m.isStarred && !m.deletedForAll && m.type !== "system") {
-          results.push({ chat: c, message: m });
-        }
-      });
-    });
-    return results.sort((a, b) => b.message.createdAt - a.message.createdAt);
-  }, [chats]);
-
-  // Global search results
-  const globalSearchResults = useMemo(() => {
-    if (!globalSearchQuery.trim() && globalSearchFilter === "all") return [];
-    let results = [];
-    const q = globalSearchQuery.trim().toLowerCase();
-
-    chats.forEach((c) => {
-      (c.messages || []).forEach((m) => {
-        if (m.deletedForAll || m.type === "system") return;
-        
-        let matchesQuery = true;
-        if (q) {
-          const textMatch = m.text ? m.text.toLowerCase().includes(q) : false;
-          const fileMatch = m.fileName ? m.fileName.toLowerCase().includes(q) : false;
-          const senderMatch = m.senderName ? m.senderName.toLowerCase().includes(q) : false;
-          matchesQuery = textMatch || fileMatch || senderMatch;
-        }
-        
-        let matchesFilter = true;
-        if (globalSearchFilter === "media") matchesFilter = m.type === "image";
-        if (globalSearchFilter === "docs") matchesFilter = m.type === "document";
-        if (globalSearchFilter === "links") matchesFilter = /^https?:\/\//i.test(m.text || "");
-
-        if (matchesQuery && matchesFilter) {
-          results.push({ chat: c, message: m });
-        }
-      });
-    });
-    return results.sort((a, b) => b.message.createdAt - a.message.createdAt);
-  }, [chats, globalSearchQuery, globalSearchFilter]);
-
   // Handlers
   const handleCloseAll = () => {
     setShowProfilePopup(false);
     setShowCreatePopup(false);
-    setActiveDrawer("none");
     setShowLogoutConfirm(false);
     setIsEditingProfile(false);
     setIsViewingProfile(false);
@@ -229,7 +164,6 @@ export default function Sidebar({ isChatOpen }) {
   const handleTogglePopup = () => {
     setShowProfilePopup((prev) => !prev);
     setShowCreatePopup(false);
-    setActiveDrawer("none");
     setShowLogoutConfirm(false);
     setIsEditingProfile(false);
     setIsViewingProfile(false);
@@ -238,21 +172,11 @@ export default function Sidebar({ isChatOpen }) {
     setDraftStatus(profile.status);
   };
 
-  const handleToggleDrawer = (drawerName) => {
-    if (activeDrawer === drawerName) {
-      setActiveDrawer("none");
-    } else {
-      setActiveDrawer(drawerName);
-      setShowProfilePopup(false);
-      setShowCreatePopup(false);
-    }
-  };
-
   const handleStartDirectMessage = (emp) => {
-    const existingChat = chats.find(c => 
+    const existingChat = chats.find(c =>
       c.kind === "dm" && (c.email === emp.email || c.contact === emp.email)
     );
-    
+
     if (existingChat) {
       handleCloseAll();
       navigate(`/chats/${existingChat.id}`);
@@ -272,7 +196,7 @@ export default function Sidebar({ isChatOpen }) {
   const handleCreateGroup = async () => {
     const name = newGroupName.trim();
     if (!name) return;
-    
+
     try {
       const newGroup = await addGroup({
         name,
@@ -291,7 +215,7 @@ export default function Sidebar({ isChatOpen }) {
 
   const handleCreateEmployee = async () => {
     if (!newEmpName.trim() || !newEmpEmail.trim() || !newEmpPassword.trim()) return;
-    
+
     setCreatingEmployee(true);
     try {
       await createEmployee({
@@ -305,7 +229,7 @@ export default function Sidebar({ isChatOpen }) {
       setNewEmpName("");
       setNewEmpEmail("");
       setNewEmpPassword("");
-      loadContacts(); // Reload contacts list
+      loadContacts();
     } catch (err) {
       showToast(err.message, "error");
     } finally {
@@ -341,21 +265,21 @@ export default function Sidebar({ isChatOpen }) {
   const handleSaveProfile = async () => {
     const trimmedName = draftName.trim();
     if (!trimmedName) return;
-    
+
     setSavingProfile(true);
     try {
       await updateProfile({
         name: trimmedName,
         status: draftStatus,
       });
-      
+
       setProfile({
         ...profile,
         name: trimmedName,
         status: draftStatus,
         photo: draftPhoto,
       });
-      
+
       // Update localStorage
       const current = getAuthUser();
       if (current) {
@@ -366,7 +290,7 @@ export default function Sidebar({ isChatOpen }) {
           avatarUrl: draftPhoto,
         }));
       }
-      
+
       setIsEditingProfile(false);
       showToast("Profile updated");
     } catch (err) {
@@ -383,7 +307,7 @@ export default function Sidebar({ isChatOpen }) {
   const handlePhotoChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     try {
       const result = await uploadProfileImage(file);
       setDraftPhoto(result.avatarUrl);
@@ -396,44 +320,32 @@ export default function Sidebar({ isChatOpen }) {
   const handleConfirmLogout = async () => {
     setIsLoggingOut(true);
     handleCloseAll();
-    
+
     try {
       await logoutUser();
     } catch (err) {
       console.error("Logout error:", err);
     }
-    
+
     setTimeout(() => {
       clearAuthUser();
       window.location.href = "/login";
     }, 1500);
   };
 
-  const handleJumpToMessage = (chatId, msgId) => {
-    const chat = chats.find(c => c.id === chatId);
-    const basePath = chat?.kind === 'group' ? 'groups' : 'chats';
-    navigate(`/${basePath}/${chatId}?msg=${msgId}`);
-    setActiveDrawer("none");
-  };
-
   // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const clickedOutsideProfile = showProfilePopup && 
-        popupRef.current && !popupRef.current.contains(event.target) && 
+      const clickedOutsideProfile = showProfilePopup &&
+        popupRef.current && !popupRef.current.contains(event.target) &&
         profileBtnRef.current && !profileBtnRef.current.contains(event.target);
-      
-      const clickedOutsideCreate = showCreatePopup && 
-        createPopupRef.current && !createPopupRef.current.contains(event.target) && 
+
+      const clickedOutsideCreate = showCreatePopup &&
+        createPopupRef.current && !createPopupRef.current.contains(event.target) &&
         createBtnRef.current && !createBtnRef.current.contains(event.target);
-      
-      const clickedOutsideDrawer = activeDrawer !== "none" && 
-        drawerRef.current && !drawerRef.current.contains(event.target) && 
-        !event.target.closest(".sidebar-action-btn");
 
       if (clickedOutsideProfile) handleCloseAll();
       if (clickedOutsideCreate) handleCloseAll();
-      if (clickedOutsideDrawer) setActiveDrawer("none");
     };
 
     const handleEscape = (event) => {
@@ -446,7 +358,7 @@ export default function Sidebar({ isChatOpen }) {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [showProfilePopup, showCreatePopup, activeDrawer]);
+  }, [showProfilePopup, showCreatePopup]);
 
   return (
     <>
@@ -459,31 +371,10 @@ export default function Sidebar({ isChatOpen }) {
               className={({ isActive }) => `sidebar-item ${isActive ? "active" : ""}`}
               aria-label={item.id}
               title={item.id.charAt(0).toUpperCase() + item.id.slice(1)}
-              onClick={() => setActiveDrawer("none")}
             >
               <span className="sidebar-icon">{ICON_BY_ID[item.id]}</span>
             </NavLink>
           ))}
-
-          <div className="sidebar-divider" />
-
-          <button
-            type="button"
-            className={`sidebar-item sidebar-action-btn ${activeDrawer === "search" ? "active" : ""}`}
-            title="Global Search"
-            onClick={() => handleToggleDrawer("search")}
-          >
-            <span className="sidebar-icon"><SearchIcon /></span>
-          </button>
-
-          <button
-            type="button"
-            className={`sidebar-item sidebar-action-btn ${activeDrawer === "starred" ? "active" : ""}`}
-            title="Starred Messages"
-            onClick={() => handleToggleDrawer("starred")}
-          >
-            <span className="sidebar-icon"><StarIcon /></span>
-          </button>
 
           <div className="sidebar-divider" />
 
@@ -497,7 +388,6 @@ export default function Sidebar({ isChatOpen }) {
               onClick={() => {
                 setShowCreatePopup(p => !p);
                 setCreateMode("contacts");
-                setActiveDrawer("none");
                 setShowProfilePopup(false);
               }}
             >
@@ -543,7 +433,7 @@ export default function Sidebar({ isChatOpen }) {
                       )}
 
                       <div className="contacts-section-title">Contacts</div>
-                      
+
                       {loadingContacts ? (
                         <div className="flyout-empty">Loading...</div>
                       ) : filteredContacts.length > 0 ? (
@@ -940,137 +830,6 @@ export default function Sidebar({ isChatOpen }) {
           </div>
         </div>
       </aside>
-
-      {/* Search Drawer */}
-      {activeDrawer !== "none" && (
-        <div className="sidebar-flyout-drawer" ref={drawerRef}>
-          <div className="flyout-header">
-            <button className="iconBtn" onClick={() => setActiveDrawer("none")}>←</button>
-            <div className="flyout-title">
-              {activeDrawer === "search" ? "Search Messages" : "Starred Messages"}
-            </div>
-          </div>
-
-          {activeDrawer === "search" && (
-            <div className="flyout-body">
-              <div className="flyout-search-bar">
-                <input
-                  type="text"
-                  placeholder="Search across all chats..."
-                  value={globalSearchQuery}
-                  onChange={e => setGlobalSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="flyout-filters">
-                <button
-                  className={`flyout-filter-btn ${globalSearchFilter === 'all' ? 'active' : ''}`}
-                  onClick={() => setGlobalSearchFilter('all')}
-                >
-                  All
-                </button>
-                <button
-                  className={`flyout-filter-btn ${globalSearchFilter === 'media' ? 'active' : ''}`}
-                  onClick={() => setGlobalSearchFilter('media')}
-                >
-                  Media
-                </button>
-                <button
-                  className={`flyout-filter-btn ${globalSearchFilter === 'docs' ? 'active' : ''}`}
-                  onClick={() => setGlobalSearchFilter('docs')}
-                >
-                  Docs
-                </button>
-                <button
-                  className={`flyout-filter-btn ${globalSearchFilter === 'links' ? 'active' : ''}`}
-                  onClick={() => setGlobalSearchFilter('links')}
-                >
-                  Links
-                </button>
-              </div>
-
-              <div className="flyout-results">
-                {globalSearchResults.length > 0 ? (
-                  globalSearchResults.map(res => (
-                    <div
-                      key={res.message.id}
-                      className="flyout-result-item"
-                      onClick={() => handleJumpToMessage(res.chat.id, res.message.id)}
-                    >
-                      <img
-                        src={res.chat.avatarUrl}
-                        alt=""
-                        className="flyout-result-avatar"
-                        onError={(e) => {
-                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(res.chat.name)}&background=random`;
-                        }}
-                      />
-                      <div className="flyout-result-content">
-                        <div className="flyout-result-top">
-                          <span className="flyout-result-chat">{res.chat.name}</span>
-                          <span className="flyout-result-time">
-                            {new Date(res.message.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="flyout-result-sender">{res.message.senderName || 'You'}</div>
-                        <div className="flyout-result-text">
-                          {res.message.type === 'image' ? `🖼 ${res.message.fileName || 'Image'}` :
-                           res.message.type === 'document' ? `📄 ${res.message.fileName || 'Document'}` :
-                           res.message.text}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flyout-empty">
-                    {globalSearchQuery ? "No results found." : "Type to search..."}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeDrawer === "starred" && (
-            <div className="flyout-body">
-              <div className="flyout-results">
-                {starredMessages.length > 0 ? (
-                  starredMessages.map(res => (
-                    <div
-                      key={res.message.id}
-                      className="flyout-result-item"
-                      onClick={() => handleJumpToMessage(res.chat.id, res.message.id)}
-                    >
-                      <img
-                        src={res.chat.avatarUrl}
-                        alt=""
-                        className="flyout-result-avatar"
-                        onError={(e) => {
-                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(res.chat.name)}&background=random`;
-                        }}
-                      />
-                      <div className="flyout-result-content">
-                        <div className="flyout-result-top">
-                          <span className="flyout-result-chat">{res.chat.name}</span>
-                          <span className="flyout-result-time">
-                            {new Date(res.message.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="flyout-result-sender">{res.message.senderName || 'You'}</div>
-                        <div className="flyout-result-text">
-                          {res.message.type === 'image' ? `🖼 ${res.message.fileName || 'Image'}` :
-                           res.message.type === 'document' ? `📄 ${res.message.fileName || 'Document'}` :
-                           res.message.text}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flyout-empty">No starred messages yet.</div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Logout Loader */}
       {isLoggingOut && (
