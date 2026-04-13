@@ -39,7 +39,7 @@ function SectionTitle({ mode }) {
 }
 
 export default function ChatListPage({ mode = "dm" }) {
-  const { chats, isLoading } = useChats();
+  const { chats, isLoading,getOnlineStatus } = useChats();
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -108,18 +108,25 @@ export default function ChatListPage({ mode = "dm" }) {
                       e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(chat.name)}&background=random`;
                     }}
                   />
-                  {chat.kind === "dm" && (
-                    <span
-                      className={`statusDotSmall ${chat.status || chat.otherUserStatus || 'available'}`}
-                      style={{
-                        position: 'absolute', bottom: 0, right: 0,
-                        width: 10, height: 10, borderRadius: '50%',
-                        border: '2px solid white',
-                        background: (chat.status || chat.otherUserStatus) === 'dnd' ? '#ef4444' :
-                          (chat.status || chat.otherUserStatus) === 'meeting' ? '#f59e0b' : '#22c55e'
-                      }}
-                    />
-                  )}
+                  {chat.kind === "dm" && (() => {
+    const onlineInfo = getOnlineStatus(String(chat.odooId));
+    const isOnline = onlineInfo?.isOnline || chat.isOnline || false;
+    const status = onlineInfo?.status || chat.status || 'available';
+    return (
+      <span
+        className={`statusDotSmall`}
+        style={{
+          position: 'absolute', bottom: 0, right: 0,
+          width: 10, height: 10, borderRadius: '50%',
+          border: '2px solid white',
+          background: !isOnline ? '#9ca3af' :
+            status === 'dnd' ? '#ef4444' :
+            status === 'meeting' ? '#f59e0b' : '#22c55e'
+        }}
+        title={!isOnline ? 'Offline' : status === 'dnd' ? 'Do Not Disturb' : status === 'meeting' ? 'In Meeting' : 'Online'}
+      />
+    );
+  })()}
                 </div>
 
                 <div className="chatRowBody">

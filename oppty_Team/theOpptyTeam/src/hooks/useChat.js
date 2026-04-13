@@ -8,6 +8,8 @@ export function useChat(chatId, isGroup = false) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [canChat, setCanChat] = useState(true);
+  const [chatRestrictionReason, setChatRestrictionReason] = useState("");
 
   const authUser = getAuthUser();
   const myId = getAuthUserId();
@@ -21,21 +23,20 @@ export function useChat(chatId, isGroup = false) {
     return id.replace("emp-", "");
   }, [chatId, isGroup]);
 
+  // ✅ FIXED: Correct WebSocket URLs matching routing.py
   const getWebSocketUrl = useCallback(() => {
     const cleanId = getCleanId();
     if (!cleanId || !authUser) return null;
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsHost = window.location.host;
     if (isGroup) {
-      return `${wsProtocol}//${wsHost}/ws/chat/group/${cleanId}/`;
+      return `${wsProtocol}//${wsHost}/ws/group/${cleanId}/`;  // ✅ FIXED: was /ws/chat/group/
     } else {
       return `${wsProtocol}//${wsHost}/ws/chat/${cleanId}/`;
     }
   }, [getCleanId, isGroup, authUser]);
 
-  // ===== NORMALIZE any message into a consistent shape =====
   const normalizeMessage = useCallback((m, source = "unknown") => {
-    // Determine isMine consistently
     let isMine;
     if (m.isMine !== undefined && m.isMine !== null) {
       isMine = m.isMine;
@@ -49,10 +50,9 @@ export function useChat(chatId, isGroup = false) {
       isMine = false;
     }
 
-    // Determine type consistently
     const msgType = m.type || m.messageType || m.message_type || "text";
 
-    const normalized = {
+    return {
       id: m.id,
       text: m.text || m.content || m.message || "",
       isMine,
@@ -63,22 +63,14 @@ export function useChat(chatId, isGroup = false) {
       createdAt: m.createdAt
         ? (typeof m.createdAt === "number" ? m.createdAt : new Date(m.createdAt).getTime())
         : Date.now(),
-
-      // Type fields — always set both
       type: msgType,
       messageType: msgType,
-
-      // File fields
       fileUrl: m.fileUrl || m.file_url || null,
       fileName: m.fileName || m.file_name || null,
       fileSize: m.fileSize || m.file_size || null,
-
-      // Meet fields
       meetLink: m.meetLink || m.meet_link || null,
       meetTitle: m.meetTitle || m.meet_title || null,
       meetScheduledAt: m.meetScheduledAt || m.meet_scheduled_at || null,
-
-      // Interaction fields
       reactions: m.reactions || {},
       userReaction: m.userReaction || null,
       isEdited: m.isEdited || false,
@@ -94,17 +86,15 @@ export function useChat(chatId, isGroup = false) {
       isPinned: m.isPinned || false,
       thread: m.thread || [],
       status: m.isRead ? "read" : (isMine ? "sent" : undefined),
-
-      // ===== POLL FIELDS — the key fix =====
       pollQuestion: m.pollQuestion || null,
       pollOptions: m.pollOptions || null,
       pollId: m.pollId || null,
       myVotes: m.myVotes || [],
       allowMultiple: m.allowMultiple || false,
       totalVotes: m.totalVotes || 0,
+      // ✅ NEW: System message flag
+      isSystemMessage: m.isSystemMessage || m.messageType === 'system' || m.type === 'system' || false,
     };
-
-    return normalized;
   }, [myId]);
 
   const handleWebSocketMessage = useCallback((payload) => {
@@ -115,9 +105,7 @@ export function useChat(chatId, isGroup = false) {
       case "file":
         setMessages(prev => {
           if (prev.find(m => m.id === data.id)) return prev;
-
           const newMsg = normalizeMessage(data, "websocket");
-
           if (newMsg.isMine) {
             const withoutTemp = prev.filter(m => {
               if (String(m.id).startsWith("temp-") && m.text === newMsg.text) return false;
@@ -125,7 +113,6 @@ export function useChat(chatId, isGroup = false) {
             });
             return [...withoutTemp, newMsg];
           }
-
           return [...prev, newMsg];
         });
         break;
@@ -208,9 +195,7 @@ export function useChat(chatId, isGroup = false) {
         break;
 
       case "poll_update":
-        // Dispatch custom event for ChatPage to handle
         window.dispatchEvent(new CustomEvent("poll_update", { detail: data }));
-        // Also update local messages directly
         setMessages(prev => prev.map(m => {
           if (m.id === data.message_id) {
             return {
@@ -222,6 +207,23 @@ export function useChat(chatId, isGroup = false) {
           }
           return m;
         }));
+        break;
+
+      // ✅ NEW: Handle chat permission update from WebSocket
+      case "chat_permission_status":
+      case "chat_permission_update":
+        setCanChat(data.canChat !== false);
+        setChatRestrictionReason(data.reason || "");
+        // Dispatch event so ChatPage can update UI
+        window.dispatchEvent(new CustomEvent("chat_permission_changed", { detail: data }));
+        break;
+
+      // ✅ NEW: Handle error messages from server (e.g., CHAT_RESTRICTED)
+      case "error":
+        if (data.code === "CHAT_RESTRICTED") {
+          setCanChat(false);
+          setChatRestrictionReason(data.message || "You cannot send messages here");
+        }
         break;
 
       default:
@@ -241,6 +243,7 @@ export function useChat(chatId, isGroup = false) {
     onError: () => { setError("Connection failed. Retrying..."); },
   });
 
+  // ✅ FIXED: Load messages — handle both array and object response
   useEffect(() => {
     const loadMessages = async () => {
       const cleanId = getCleanId();
@@ -252,14 +255,14 @@ export function useChat(chatId, isGroup = false) {
       try {
         let data;
         if (isGroup) {
-          data = await fetchGroupMessages(cleanId);
+          data = await fetchGroupMessages(cleanId); // Already returns array (fixed in api.js)
         } else {
           data = await fetchMessages(cleanId);
         }
 
-        // Use the same normalizeMessage for REST API data
-        const formatted = (data || []).map(m => normalizeMessage(m, "rest"));
-
+        // Safety check — ensure it's an array
+        const messageArray = Array.isArray(data) ? data : (data?.messages || []);
+        const formatted = messageArray.map(m => normalizeMessage(m, "rest"));
         setMessages(formatted);
       } catch (err) {
         console.error("Failed to load messages:", err);
@@ -270,6 +273,8 @@ export function useChat(chatId, isGroup = false) {
     };
 
     setMessages([]);
+    setCanChat(true);
+    setChatRestrictionReason("");
     loadMessages();
 
     return () => {
@@ -361,6 +366,7 @@ export function useChat(chatId, isGroup = false) {
 
   return {
     messages, loading, error, connectionStatus, isConnected, typingUsers,
+    canChat, chatRestrictionReason,   // ✅ NEW: expose permission state
     sendTextMessage, sendFile, sendTypingIndicator, sendReaction,
     editMessage: editMessageWs, deleteMessage: deleteMessageWs,
     markAsRead, updateMessageLocal, deleteMessageLocal, setMessages,

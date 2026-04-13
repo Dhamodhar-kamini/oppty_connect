@@ -63,7 +63,6 @@ export async function createEmployee(data) {
   return result;
 }
 
-// ✅ NEW: Block/Unblock user API
 export async function toggleBlockUser(userId) {
   const cleanId = String(userId).replace('emp-', '');
   const response = await apiFetch(`/api/users/${cleanId}/block/`, { method: "POST" });
@@ -103,7 +102,6 @@ export async function markMessagesRead(targetId) {
   return response.json();
 }
 
-// ✅ NEW: Forward Messages
 export async function forwardMessagesApi(messages, targetIds) {
   const response = await apiFetch("/api/messages/forward/", {
     method: "POST",
@@ -114,14 +112,12 @@ export async function forwardMessagesApi(messages, targetIds) {
   return result;
 }
 
-// ✅ NEW: Toggle Star
 export async function toggleMessageStar(messageId) {
   const response = await apiFetch(`/api/messages/${messageId}/star/`, { method: "POST" });
   if (!response.ok) throw new Error("Failed to star message");
   return response.json();
 }
 
-// ✅ NEW: Toggle Pin
 export async function toggleMessagePin(messageId) {
   const response = await apiFetch(`/api/messages/${messageId}/pin/`, { method: "POST" });
   if (!response.ok) throw new Error("Failed to pin message");
@@ -200,11 +196,16 @@ export async function fetchGroupDetails(groupId) {
   return response.json();
 }
 
+// ✅ FIXED: fetchGroupMessages now extracts array from object response
 export async function fetchGroupMessages(groupId) {
   const cleanId = String(groupId).replace('group-', '');
   const response = await apiFetch(`/api/groups/${cleanId}/messages/`, { method: "GET" });
   if (!response.ok) throw new Error("Failed to fetch group messages");
-  return response.json();
+  const data = await response.json();
+  // Backend returns { messages: [...], canChat: ..., ... } OR plain array
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.messages)) return data.messages;
+  return [];
 }
 
 export async function addGroupMembers(groupId, memberIds) {
@@ -237,6 +238,32 @@ export async function leaveGroup(groupId) {
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "Failed to leave group");
   return result;
+}
+
+// ==================== GROUP CHAT PERMISSION ====================
+export async function getGroupChatPermission(groupId) {
+  const cleanId = String(groupId).replace('group-', '');
+  const response = await apiFetch(`/api/groups/${cleanId}/chat-permission/`, { method: "GET" });
+  if (!response.ok) throw new Error("Failed to fetch chat permission");
+  return response.json();
+}
+
+export async function updateGroupChatPermission(groupId, chatPermission, allowedChatters = []) {
+  const cleanId = String(groupId).replace('group-', '');
+  const response = await apiFetch(`/api/groups/${cleanId}/chat-permission/update/`, {
+    method: "POST",
+    body: JSON.stringify({ chat_permission: chatPermission, allowed_chatters: allowedChatters }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Failed to update chat permission");
+  return result;
+}
+
+export async function checkCanChat(groupId) {
+  const cleanId = String(groupId).replace('group-', '');
+  const response = await apiFetch(`/api/groups/${cleanId}/chat-permission/check/`, { method: "GET" });
+  if (!response.ok) throw new Error("Failed to check chat permission");
+  return response.json();
 }
 
 // ==================== GOOGLE MEET ====================
@@ -315,20 +342,21 @@ export async function adminExitEmployeeView(employeeId) {
   return response.json();
 }
 
+// ✅ FIXED: Correct WebSocket URLs matching routing.py
 export function getWebSocketUrl(targetId, isGroup = false) {
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsHost = window.location.host;
   
   if (isGroup) {
     const cleanId = String(targetId).replace('group-', '');
-    return `${wsProtocol}//${wsHost}/ws/chat/group/${cleanId}/`;
+    return `${wsProtocol}//${wsHost}/ws/group/${cleanId}/`;  // ✅ FIXED: was /ws/chat/group/
   } else {
     const cleanId = String(targetId).replace('emp-', '');
     return `${wsProtocol}//${wsHost}/ws/chat/${cleanId}/`;
   }
 }
-// ==================== POLLS ====================
 
+// ==================== POLLS ====================
 export async function createPoll({ question, options, allowMultiple, receiverId, groupId }) {
   const response = await apiFetch("/api/polls/create/", {
     method: "POST",
@@ -362,4 +390,27 @@ export async function getPollResults(pollId) {
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "Failed to get poll results");
   return result;
+}
+
+// ==================== ONLINE STATUS ====================
+export async function getAllOnlineStatus() {
+  const response = await apiFetch("/api/users/online-status/", { method: "GET" });
+  if (!response.ok) throw new Error("Failed to fetch online status");
+  return response.json();
+}
+
+export async function getUserOnlineStatus(userId) {
+  const cleanId = String(userId).replace('emp-', '');
+  const response = await apiFetch(`/api/users/${cleanId}/online-status/`, { method: "GET" });
+  if (!response.ok) throw new Error("Failed to fetch user online status");
+  return response.json();
+}
+
+export async function updateOnlineStatus(isOnline = true) {
+  const response = await apiFetch("/api/users/update-online/", {
+    method: "POST",
+    body: JSON.stringify({ is_online: isOnline }),
+  });
+  if (!response.ok) throw new Error("Failed to update online status");
+  return response.json();
 }

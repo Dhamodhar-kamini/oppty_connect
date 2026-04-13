@@ -1,8 +1,8 @@
-// src/components/sidebar/sidebar.jsx
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useChats } from "../../context/ChatContext.jsx";
-import { fetchUsers, createEmployee, logoutUser, updateProfile, uploadProfileImage } from "../../utils/api.js";
+import { fetchUsers, logoutUser, updateProfile, uploadProfileImage } from "../../utils/api.js";
+// ✅ REMOVED: createEmployee from API imports (now using context)
 import { getAuthUser, clearAuthUser, isAdminUser as checkIsAdmin } from "../../utils/auth.js";
 import AppLoader from "../common/AppLoader.jsx";
 import "./Sidebar.css";
@@ -65,7 +65,19 @@ function getInitials(name) {
 
 export default function Sidebar({ isChatOpen }) {
   const navigate = useNavigate();
-  const { chats, addContact, addGroup, showToast, theme, toggleTheme, reloadChats } = useChats();
+
+  // ✅ Get createEmployee and createGroup from context
+  const {
+    chats,
+    showToast,
+    theme,
+    toggleTheme,
+    loadData,
+    createEmployee,  // ✅ From context - auto refreshes list
+    createGroup,     // ✅ From context - auto refreshes list
+    isAdmin: isAdminRole,
+    updatePresenceStatus, 
+  } = useChats();
 
   const authUser = getAuthUser();
   const isAdminUser = checkIsAdmin();
@@ -85,7 +97,7 @@ export default function Sidebar({ isChatOpen }) {
   // Group creation state
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupAbout, setNewGroupAbout] = useState("");
-  const [newGroupIsBroadcast, setNewGroupIsBroadcast] = useState(false);
+  // const [newGroupIsBroadcast, setNewGroupIsBroadcast] = useState(false);
 
   // Employee creation state
   const [newEmpName, setNewEmpName] = useState("");
@@ -181,57 +193,56 @@ export default function Sidebar({ isChatOpen }) {
       handleCloseAll();
       navigate(`/chats/${existingChat.id}`);
     } else {
-      const newChat = addContact({
-        id: `emp-${emp.id}`,
-        name: emp.name,
-        contact: emp.email,
-        avatarUrl: emp.avatarUrl,
-        about: emp.about || "Hey there!",
-      });
       handleCloseAll();
       navigate(`/chats/emp-${emp.id}`);
     }
   };
 
+  // ✅ FIXED: Use context createGroup instead of direct API
   const handleCreateGroup = async () => {
     const name = newGroupName.trim();
     if (!name) return;
 
     try {
-      const newGroup = await addGroup({
+      const result = await createGroup({
         name,
-        about: newGroupAbout,
-        isBroadcast: newGroupIsBroadcast,
+        description: newGroupAbout,
+        // is_broadcast: newGroupIsBroadcast,
       });
       handleCloseAll();
-      navigate(`/groups/${newGroup.id}`);
+      navigate(`/groups/group-${result.id}`);
       setNewGroupName("");
       setNewGroupAbout("");
-      setNewGroupIsBroadcast(false);
+      // setNewGroupIsBroadcast(false);
     } catch (err) {
-      showToast(err.message, "error");
+      // Error toast already shown by context
     }
   };
 
+  // ✅ FIXED: Use context createEmployee instead of direct API call
   const handleCreateEmployee = async () => {
     if (!newEmpName.trim() || !newEmpEmail.trim() || !newEmpPassword.trim()) return;
 
     setCreatingEmployee(true);
     try {
+      // ✅ This now auto-refreshes the users list via context
       await createEmployee({
         name: newEmpName.trim(),
         email: newEmpEmail.trim(),
         password: newEmpPassword.trim(),
         role: "employee",
       });
-      showToast("Employee created successfully!");
+
+      // Switch back to contacts view and reload contacts
       setCreateMode("contacts");
       setNewEmpName("");
       setNewEmpEmail("");
       setNewEmpPassword("");
-      loadContacts();
+
+      // ✅ Reload local contacts list too
+      await loadContacts();
     } catch (err) {
-      showToast(err.message, "error");
+      // Error toast already shown by context
     } finally {
       setCreatingEmployee(false);
     }
@@ -280,7 +291,6 @@ export default function Sidebar({ isChatOpen }) {
         photo: draftPhoto,
       });
 
-      // Update localStorage
       const current = getAuthUser();
       if (current) {
         localStorage.setItem("employeeAuth", JSON.stringify({
@@ -290,7 +300,7 @@ export default function Sidebar({ isChatOpen }) {
           avatarUrl: draftPhoto,
         }));
       }
-
+      updatePresenceStatus(draftStatus);
       setIsEditingProfile(false);
       showToast("Profile updated");
     } catch (err) {
@@ -494,14 +504,14 @@ export default function Sidebar({ isChatOpen }) {
                           placeholder="Group description (optional)"
                         />
                       </label>
-                      <label className="pollToggleRow" style={{ marginTop: 12 }}>
+                      {/* <label className="pollToggleRow" style={{ marginTop: 12 }}>
                         <input
                           type="checkbox"
                           checked={newGroupIsBroadcast}
                           onChange={e => setNewGroupIsBroadcast(e.target.checked)}
                         />
                         <span>Broadcast Channel (Only admins can post)</span>
-                      </label>
+                      </label> */}
                       <div className="profile-popup-actions" style={{ marginTop: 20 }}>
                         <button
                           type="button"
