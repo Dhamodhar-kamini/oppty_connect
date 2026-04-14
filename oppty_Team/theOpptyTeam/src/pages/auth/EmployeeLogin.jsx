@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginUser, ensureCsrfToken, apiFetch } from "../../utils/api";
+import {
+  loginUser,
+  ensureCsrfToken,
+  forgotCheckEmail,
+  forgotVerifyOtp,
+  forgotResetPassword,
+} from "../../utils/api";
 import { setAuthUser, isAuthenticated } from "../../utils/auth";
 import AppLoader from "../../components/common/AppLoader";
 import companyLogo from "../../assets/opptylogo.png";
 import "./EmployeeLogin.css";
 
+// ── Constants ─────────────────────────────────────────────────
 const FORGOT_STEPS = {
   EMAIL: "EMAIL",
   OTP: "OTP",
@@ -13,7 +20,7 @@ const FORGOT_STEPS = {
   SUCCESS: "SUCCESS",
 };
 
-// ── Password strength calculator ────────────────────────────────
+// ── Password Strength ─────────────────────────────────────────
 function getPasswordStrength(password) {
   if (!password) return { score: 0, label: "", color: "" };
   const checks = [
@@ -38,16 +45,16 @@ function getPasswordStrength(password) {
 export default function EmployeeLogin() {
   const navigate = useNavigate();
 
-  // ── Splash ───────────────────────────────────────────────────
+  // ── Splash ────────────────────────────────────────────────
   const [showSplash, setShowSplash] = useState(true);
 
-  // ── Login ────────────────────────────────────────────────────
+  // ── Login ─────────────────────────────────────────────────
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showLoginPwd, setShowLoginPwd] = useState(false);
 
-  // ── Forgot password ──────────────────────────────────────────
+  // ── Forgot Password ───────────────────────────────────────
   const [showForgotPopup, setShowForgotPopup] = useState(false);
   const [forgotStep, setForgotStep] = useState(FORGOT_STEPS.EMAIL);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -56,28 +63,26 @@ export default function EmployeeLogin() {
   const [maskedMobile, setMaskedMobile] = useState("");
   const [employeeNameHint, setEmployeeNameHint] = useState("");
   const [otpValue, setOtpValue] = useState("");
-  const [resetToken, setResetToken] = useState("");
   const [resetForm, setResetForm] = useState({ password: "", confirm: "" });
   const [showResetPwd, setShowResetPwd] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // ── Loading states ───────────────────────────────────────────
+  // ── Loading States ────────────────────────────────────────
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isResettingPwd, setIsResettingPwd] = useState(false);
 
-  // ── OTP timer ────────────────────────────────────────────────
+  // ── OTP Timer ─────────────────────────────────────────────
   const [otpTimer, setOtpTimer] = useState(0);
-  const [otpSentAt, setOtpSentAt] = useState(null);
 
-  // ── Splash timer ─────────────────────────────────────────────
+  // ── Splash Timer ──────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 5500);
     return () => clearTimeout(t);
   }, []);
 
-  // ── Redirect if already authenticated ───────────────────────
+  // ── Auth Redirect ─────────────────────────────────────────
   useEffect(() => {
     if (!showSplash && isAuthenticated()) {
       navigate("/chats", { replace: true });
@@ -85,14 +90,17 @@ export default function EmployeeLogin() {
     ensureCsrfToken();
   }, [showSplash, navigate]);
 
-  // ── OTP countdown timer ──────────────────────────────────────
+  // ── OTP Countdown ─────────────────────────────────────────
   useEffect(() => {
     if (otpTimer <= 0) return;
-    const id = setInterval(() => setOtpTimer((t) => (t > 0 ? t - 1 : 0)), 1000);
+    const id = setInterval(
+      () => setOtpTimer((t) => (t > 0 ? t - 1 : 0)),
+      1000
+    );
     return () => clearInterval(id);
   }, [otpTimer]);
 
-  // ── Reset forgot state ───────────────────────────────────────
+  // ── Reset Forgot State ────────────────────────────────────
   const resetForgot = useCallback(() => {
     setForgotStep(FORGOT_STEPS.EMAIL);
     setForgotEmail("");
@@ -101,18 +109,25 @@ export default function EmployeeLogin() {
     setMaskedMobile("");
     setEmployeeNameHint("");
     setOtpValue("");
-    setResetToken("");
     setResetForm({ password: "", confirm: "" });
     setOtpTimer(0);
-    setOtpSentAt(null);
     setShowResetPwd(false);
     setShowResetConfirm(false);
   }, []);
 
-  const openForgotPopup = () => { resetForgot(); setShowForgotPopup(true); };
-  const closeForgotPopup = () => { setShowForgotPopup(false); resetForgot(); };
+  const openForgotPopup = () => {
+    resetForgot();
+    setShowForgotPopup(true);
+  };
 
-  // ── LOGIN ────────────────────────────────────────────────────
+  const closeForgotPopup = () => {
+    setShowForgotPopup(false);
+    resetForgot();
+  };
+
+  // ═══════════════════════════════════════════════════════════
+  // LOGIN
+  // ═══════════════════════════════════════════════════════════
   const handleLoginChange = (e) => {
     setLoginForm((p) => ({ ...p, [e.target.name]: e.target.value }));
     setLoginError("");
@@ -120,14 +135,23 @@ export default function EmployeeLogin() {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (!loginForm.email.trim()) { setLoginError("Please enter your email."); return; }
-    if (!loginForm.password) { setLoginError("Please enter your password."); return; }
+    if (!loginForm.email.trim()) {
+      setLoginError("Please enter your email.");
+      return;
+    }
+    if (!loginForm.password) {
+      setLoginError("Please enter your password.");
+      return;
+    }
 
     setIsLoggingIn(true);
     setLoginError("");
 
     try {
-      const user = await loginUser(loginForm.email.trim(), loginForm.password);
+      const user = await loginUser(
+        loginForm.email.trim(),
+        loginForm.password
+      );
       setAuthUser({
         id: user.id,
         employeeId: user.id,
@@ -139,81 +163,97 @@ export default function EmployeeLogin() {
         avatarUrl: user.avatarUrl,
         is_suspended: user.is_suspended,
       });
-      setTimeout(() => { window.location.href = "/chats"; }, 1200);
+      setTimeout(() => {
+        window.location.href = "/chats";
+      }, 1200);
     } catch (err) {
       setLoginError(err.message || "Invalid email or password.");
       setIsLoggingIn(false);
     }
   };
 
-  // ── FORGOT STEP 1 — Check email ──────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // FORGOT — STEP 1
+  // Calls: POST /api/employee/verify-email/
+  // Body:  { email }
+  // This verifies email exists AND sends OTP in one call
+  // ═══════════════════════════════════════════════════════════
   const handleCheckEmail = async () => {
     const email = forgotEmail.trim();
-    if (!email) { setForgotError("Please enter your email address."); return; }
+
+    if (!email) {
+      setForgotError("Please enter your email address.");
+      return;
+    }
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRe.test(email)) { setForgotError("Please enter a valid email address."); return; }
+    if (!emailRe.test(email)) {
+      setForgotError("Please enter a valid email address.");
+      return;
+    }
 
     setIsCheckingEmail(true);
     setForgotError("");
     setForgotSuccess("");
 
     try {
-      const res = await apiFetch("/api/auth/check-email/", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
+      const result = await forgotCheckEmail(email);
 
-      if (!res.ok) {
-        setForgotError(data.error || "Email not found.");
-        return;
-      }
+      // Store whatever your backend returns
+      setMaskedMobile(result.masked_mobile || "");
+      setEmployeeNameHint(result.employee_name || "");
 
-      setMaskedMobile(data.masked_mobile || "");
-      setEmployeeNameHint(data.employee_name || "");
-
-      // Auto-send OTP
-      await handleSendOtp(email);
-    } catch {
-      setForgotError("Network error. Please try again.");
+      // OTP already sent by verify-email
+      setOtpTimer(60);
+      setForgotSuccess("OTP sent to your registered email.");
+      setForgotStep(FORGOT_STEPS.OTP);
+    } catch (err) {
+      setForgotError(
+        err.message || "Email not found in our records."
+      );
     } finally {
       setIsCheckingEmail(false);
     }
   };
 
-  // ── FORGOT STEP 2 — Send / resend OTP ───────────────────────
-  const handleSendOtp = async (emailOverride = null) => {
-    const email = emailOverride || forgotEmail.trim();
+  // ═══════════════════════════════════════════════════════════
+  // FORGOT — RESEND OTP
+  // Calls: POST /api/employee/verify-email/ (same endpoint)
+  // ═══════════════════════════════════════════════════════════
+  const handleResendOtp = async () => {
+    const email = forgotEmail.trim();
+
     setIsSendingOtp(true);
     setForgotError("");
     setForgotSuccess("");
 
     try {
-      const res = await apiFetch("/api/auth/send-otp/", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setForgotError(data.error || "Failed to send OTP.");
-        return;
-      }
+      await forgotCheckEmail(email);
 
       setOtpTimer(60);
-      setOtpSentAt(new Date());
-      setForgotSuccess(`OTP sent to your registered mobile number.`);
-      if (!emailOverride) setOtpValue("");
-      if (forgotStep === FORGOT_STEPS.EMAIL) setForgotStep(FORGOT_STEPS.OTP);
-    } catch {
-      setForgotError("Failed to send OTP. Please try again.");
+      setOtpValue("");
+      setForgotSuccess("OTP resent successfully!");
+
+      // Clear success after 3s — matches vanilla JS behaviour
+      setTimeout(() => setForgotSuccess(""), 3000);
+    } catch (err) {
+      setForgotError(
+        err.message || "Failed to resend OTP. Please try again."
+      );
     } finally {
       setIsSendingOtp(false);
     }
   };
 
-  // ── FORGOT STEP 3 — Verify OTP ───────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // FORGOT — STEP 2
+  // Calls: POST /api/verify-otp/
+  // Body:  { email, otp }
+  // ═══════════════════════════════════════════════════════════
   const handleVerifyOtp = async () => {
+    if (!otpValue.trim()) {
+      setForgotError("Please enter the OTP.");
+      return;
+    }
     if (otpValue.length !== 6) {
       setForgotError("Please enter the complete 6-digit OTP.");
       return;
@@ -221,81 +261,82 @@ export default function EmployeeLogin() {
 
     setIsVerifyingOtp(true);
     setForgotError("");
+    setForgotSuccess("");
 
     try {
-      const res = await apiFetch("/api/auth/verify-otp/", {
-        method: "POST",
-        body: JSON.stringify({
-          email: forgotEmail.trim(),
-          otp: otpValue,
-        }),
-      });
-      const data = await res.json();
+      await forgotVerifyOtp(forgotEmail.trim(), otpValue);
 
-      if (!res.ok) {
-        setForgotError(data.error || "Invalid OTP.");
-        return;
-      }
-
-      setResetToken(data.reset_token);
       setForgotSuccess("OTP verified! Set your new password.");
       setForgotStep(FORGOT_STEPS.RESET);
-    } catch {
-      setForgotError("Network error. Please try again.");
+    } catch (err) {
+      setForgotError(err.message || "Invalid or expired OTP.");
     } finally {
       setIsVerifyingOtp(false);
     }
   };
 
-  // ── FORGOT STEP 4 — Reset password ───────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // FORGOT — STEP 3
+  // Calls: PATCH /api/employee/reset-password/
+  // Body:  { email, new_password }
+  // ═══════════════════════════════════════════════════════════
   const handleResetPassword = async () => {
-    if (!resetForm.password) { setForgotError("Please enter a new password."); return; }
-    if (resetForm.password.length < 6) { setForgotError("Password must be at least 6 characters."); return; }
-    if (!resetForm.confirm) { setForgotError("Please confirm your password."); return; }
-    if (resetForm.password !== resetForm.confirm) { setForgotError("Passwords do not match."); return; }
-    if (!resetToken) { setForgotError("Session expired. Please start over."); return; }
+    const { password, confirm } = resetForm;
+
+    if (!password) {
+      setForgotError("Please enter a new password.");
+      return;
+    }
+    if (password.length < 6) {
+      setForgotError("Password must be at least 6 characters.");
+      return;
+    }
+    if (!confirm) {
+      setForgotError("Please confirm your password.");
+      return;
+    }
+    if (password !== confirm) {
+      setForgotError("Passwords do not match.");
+      return;
+    }
 
     setIsResettingPwd(true);
     setForgotError("");
 
     try {
-      const res = await apiFetch("/api/auth/reset-password/", {
-        method: "POST",
-        body: JSON.stringify({
-          email: forgotEmail.trim(),
-          new_password: resetForm.password,
-          reset_token: resetToken,
-        }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setForgotError(data.error || "Failed to reset password.");
-        return;
-      }
+      await forgotResetPassword(forgotEmail.trim(), password);
 
       setForgotStep(FORGOT_STEPS.SUCCESS);
-    } catch {
-      setForgotError("Network error. Please try again.");
+
+      // Auto close after 2.5s — matches vanilla JS behaviour
+      setTimeout(() => {
+        closeForgotPopup();
+      }, 2500);
+    } catch (err) {
+      setForgotError(err.message || "Failed to update password.");
     } finally {
       setIsResettingPwd(false);
     }
   };
 
   const pwdStrength = getPasswordStrength(resetForm.password);
-
-  // ── Step index for indicator ─────────────────────────────────
   const stepIndex = Object.keys(FORGOT_STEPS).indexOf(forgotStep);
 
-  // ── SPLASH ───────────────────────────────────────────────────
+  // ── Splash Screen ─────────────────────────────────────────
   if (showSplash) {
     return (
       <div className="hollywood-bright-splash">
         <div className="hollywood-studio-lights" />
-        <p className="hollywood-presents">Oppty Techhub Private Limited</p>
+        <p className="hollywood-presents">
+          Oppty Techhub Private Limited
+        </p>
         <div className="hollywood-main-reveal">
           <div className="hollywood-logo-wrapper">
-            <img src={companyLogo} alt="Oppty Logo" className="hollywood-logo" />
+            <img
+              src={companyLogo}
+              alt="Oppty Logo"
+              className="hollywood-logo"
+            />
             <div className="hollywood-sun-glint" />
           </div>
           <div className="hollywood-title-wrapper">
@@ -306,12 +347,13 @@ export default function EmployeeLogin() {
     );
   }
 
-  // ── MAIN RENDER ──────────────────────────────────────────────
+  // ── Main Render ───────────────────────────────────────────
   return (
     <>
       <div className="employee-login-page">
         <div className="employee-login-card">
-          {/* Header */}
+
+          {/* ── Header ────────────────────────────────────── */}
           <div className="employee-login-header">
             <div className="brandRow">
               <img
@@ -326,8 +368,12 @@ export default function EmployeeLogin() {
             <p>Login to access your chat dashboard</p>
           </div>
 
-          {/* Login Form */}
-          <form className="employee-login-form" onSubmit={handleLoginSubmit}>
+          {/* ── Login Form ─────────────────────────────────── */}
+          <form
+            className="employee-login-form"
+            onSubmit={handleLoginSubmit}
+            noValidate
+          >
             <div className="auth-input-group">
               <label htmlFor="l-email">Email</label>
               <input
@@ -368,7 +414,9 @@ export default function EmployeeLogin() {
             </div>
 
             {loginError && (
-              <div className="auth-error-msg" role="alert">{loginError}</div>
+              <div className="auth-error-msg" role="alert">
+                {loginError}
+              </div>
             )}
 
             <button
@@ -390,7 +438,9 @@ export default function EmployeeLogin() {
           </form>
         </div>
 
-        {/* ── Forgot Password Popup ─────────────────────────── */}
+        {/* ══════════════════════════════════════════════════
+            FORGOT PASSWORD POPUP
+            ══════════════════════════════════════════════════ */}
         {showForgotPopup && (
           <div
             className="auth-popup-overlay"
@@ -402,13 +452,17 @@ export default function EmployeeLogin() {
               className="auth-popup-card"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Popup header */}
+              {/* ── Popup Header ───────────────────────────── */}
               <div className="auth-popup-top">
                 <h2>
-                  {forgotStep === FORGOT_STEPS.EMAIL && "Forgot Password"}
-                  {forgotStep === FORGOT_STEPS.OTP && "Verify Mobile OTP"}
-                  {forgotStep === FORGOT_STEPS.RESET && "New Password"}
-                  {forgotStep === FORGOT_STEPS.SUCCESS && "All Done!"}
+                  {forgotStep === FORGOT_STEPS.EMAIL &&
+                    "Forgot Password"}
+                  {forgotStep === FORGOT_STEPS.OTP &&
+                    "Verify OTP"}
+                  {forgotStep === FORGOT_STEPS.RESET &&
+                    "Set New Password"}
+                  {forgotStep === FORGOT_STEPS.SUCCESS &&
+                    "All Done!"}
                 </h2>
                 <button
                   type="button"
@@ -420,7 +474,7 @@ export default function EmployeeLogin() {
                 </button>
               </div>
 
-              {/* Step indicator */}
+              {/* ── Step Indicator ─────────────────────────── */}
               {forgotStep !== FORGOT_STEPS.SUCCESS && (
                 <div className="auth-step-indicator">
                   {["Email", "OTP", "Reset"].map((label, i) => {
@@ -429,13 +483,19 @@ export default function EmployeeLogin() {
                     return (
                       <React.Fragment key={label}>
                         <div
-                          className={`auth-step-dot ${isActive ? "active" : ""} ${isDone ? "done" : ""}`}
+                          className={`auth-step-dot${
+                            isActive ? " active" : ""
+                          }${isDone ? " done" : ""}`}
                           title={label}
                         >
                           {isDone ? "✓" : i + 1}
                         </div>
                         {i < 2 && (
-                          <div className={`auth-step-line ${isDone ? "done" : ""}`} />
+                          <div
+                            className={`auth-step-line${
+                              isDone ? " done" : ""
+                            }`}
+                          />
                         )}
                       </React.Fragment>
                     );
@@ -443,16 +503,16 @@ export default function EmployeeLogin() {
                 </div>
               )}
 
-              {/* ── STEP 1: Email ── */}
+              {/* ════════════════════════════════════════════
+                  STEP 1 — EMAIL
+                  POST /api/employee/verify-email/
+                  ════════════════════════════════════════════ */}
               {forgotStep === FORGOT_STEPS.EMAIL && (
                 <div className="auth-popup-body">
-                  <div className="auth-info-banner">
-                    <span className="auth-info-icon">📱</span>
-                    <p>
-                      Enter your registered email. We'll send an OTP to
-                      your linked mobile number to verify your identity.
-                    </p>
-                  </div>
+                  <p className="auth-popup-desc">
+                    Enter your registered email address. We'll
+                    send an OTP to verify your identity.
+                  </p>
 
                   <div className="auth-input-group">
                     <label>Email Address</label>
@@ -467,13 +527,16 @@ export default function EmployeeLogin() {
                       disabled={isCheckingEmail}
                       autoFocus
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") handleCheckEmail();
+                        if (e.key === "Enter")
+                          handleCheckEmail();
                       }}
                     />
                   </div>
 
                   {forgotError && (
-                    <div className="auth-error-msg" role="alert">{forgotError}</div>
+                    <div className="auth-error-msg" role="alert">
+                      {forgotError}
+                    </div>
                   )}
 
                   <div className="auth-popup-actions">
@@ -488,41 +551,52 @@ export default function EmployeeLogin() {
                       type="button"
                       className="auth-primary-btn"
                       onClick={handleCheckEmail}
-                      disabled={isCheckingEmail || isSendingOtp || !forgotEmail.trim()}
+                      disabled={
+                        isCheckingEmail || !forgotEmail.trim()
+                      }
                     >
-                      {isCheckingEmail || isSendingOtp
-                        ? "Sending OTP…"
-                        : "Send OTP"}
+                      {isCheckingEmail
+                        ? "Checking…"
+                        : "Verify Email"}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* ── STEP 2: OTP ── */}
+              {/* ════════════════════════════════════════════
+                  STEP 2 — OTP
+                  POST /api/verify-otp/
+                  Resend: POST /api/employee/verify-email/
+                  ════════════════════════════════════════════ */}
               {forgotStep === FORGOT_STEPS.OTP && (
                 <div className="auth-popup-body">
-                  {/* Mobile hint card */}
-                  <div className="auth-mobile-hint-card">
-                    <div className="auth-mobile-hint-icon">📱</div>
-                    <div>
-                      {employeeNameHint && (
-                        <div className="auth-mobile-hint-name">
-                          Hi, {employeeNameHint}!
-                        </div>
-                      )}
-                      <div className="auth-mobile-hint-text">
-                        OTP sent to{" "}
-                        <strong style={{ fontFamily: "monospace" }}>
-                          {maskedMobile || "your mobile"}
-                        </strong>
-                      </div>
-                      <div className="auth-mobile-hint-sub">
-                        Valid for 10 minutes
-                      </div>
-                    </div>
+                  {/* Greeting + hint */}
+                  <div>
+                    {employeeNameHint && (
+                      <p
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 700,
+                          color: "#111b21",
+                          margin: "0 0 4px",
+                        }}
+                      >
+                        Hi, {employeeNameHint}!
+                      </p>
+                    )}
+                    <p
+                      className="auth-popup-desc"
+                      style={{ margin: "0 0 4px" }}
+                    >
+                      OTP sent to{" "}
+                      <strong style={{ fontFamily: "monospace" }}>
+                        {maskedMobile || forgotEmail}
+                      </strong>
+                      . Valid for 10 minutes.
+                    </p>
                   </div>
 
-                  {/* OTP input */}
+                  {/* OTP Input */}
                   <div className="auth-input-group">
                     <label>Enter 6-Digit OTP</label>
                     <input
@@ -531,49 +605,49 @@ export default function EmployeeLogin() {
                       maxLength={6}
                       value={otpValue}
                       onChange={(e) => {
-                        setOtpValue(e.target.value.replace(/\D/g, ""));
+                        setOtpValue(
+                          e.target.value.replace(/\D/g, "")
+                        );
                         setForgotError("");
                         setForgotSuccess("");
                       }}
                       placeholder="• • • • • •"
-                      className="auth-otp-input"
+                      style={{
+                        letterSpacing: "0.3em",
+                        fontSize: 20,
+                        fontWeight: 700,
+                        textAlign: "center",
+                        fontFamily: "'Courier New', monospace",
+                      }}
                       disabled={isVerifyingOtp}
                       autoFocus
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" && otpValue.length === 6) {
+                        if (
+                          e.key === "Enter" &&
+                          otpValue.length === 6
+                        )
                           handleVerifyOtp();
-                        }
                       }}
                     />
                   </div>
 
-                  {/* OTP boxes visual */}
-                  <div className="auth-otp-boxes">
-                    {[0, 1, 2, 3, 4, 5].map((i) => (
-                      <div
-                        key={i}
-                        className={`auth-otp-box ${
-                          otpValue[i]
-                            ? "auth-otp-box-filled"
-                            : i === otpValue.length
-                            ? "auth-otp-box-active"
-                            : ""
-                        }`}
-                      >
-                        {otpValue[i] || ""}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Resend */}
-                  <div className="auth-resend-row">
-                    <span style={{ fontSize: "13px", color: "#667781" }}>
+                  {/* Resend Row */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <span
+                      style={{ fontSize: 13, color: "#667781" }}
+                    >
                       Didn't receive it?
                     </span>
                     <button
                       type="button"
                       className="resend-otp-btn"
-                      onClick={() => handleSendOtp()}
+                      onClick={handleResendOtp}
                       disabled={otpTimer > 0 || isSendingOtp}
                     >
                       {isSendingOtp
@@ -585,10 +659,14 @@ export default function EmployeeLogin() {
                   </div>
 
                   {forgotError && (
-                    <div className="auth-error-msg" role="alert">{forgotError}</div>
+                    <div className="auth-error-msg" role="alert">
+                      {forgotError}
+                    </div>
                   )}
                   {forgotSuccess && (
-                    <div className="auth-success-msg">{forgotSuccess}</div>
+                    <div className="auth-success-msg">
+                      {forgotSuccess}
+                    </div>
                   )}
 
                   <div className="auth-popup-actions">
@@ -609,21 +687,36 @@ export default function EmployeeLogin() {
                       type="button"
                       className="auth-primary-btn"
                       onClick={handleVerifyOtp}
-                      disabled={otpValue.length !== 6 || isVerifyingOtp}
+                      disabled={
+                        otpValue.length !== 6 || isVerifyingOtp
+                      }
                     >
-                      {isVerifyingOtp ? "Verifying…" : "Verify OTP"}
+                      {isVerifyingOtp
+                        ? "Verifying…"
+                        : "Verify OTP"}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* ── STEP 3: Reset Password ── */}
+              {/* ════════════════════════════════════════════
+                  STEP 3 — RESET PASSWORD
+                  PATCH /api/employee/reset-password/
+                  Body: { email, new_password }
+                  ════════════════════════════════════════════ */}
               {forgotStep === FORGOT_STEPS.RESET && (
                 <div className="auth-popup-body">
                   {forgotSuccess && (
-                    <div className="auth-success-msg">{forgotSuccess}</div>
+                    <div className="auth-success-msg">
+                      {forgotSuccess}
+                    </div>
                   )}
 
+                  <p className="auth-popup-desc">
+                    Create a strong password for your account.
+                  </p>
+
+                  {/* New Password */}
                   <div className="auth-input-group">
                     <label>New Password</label>
                     <div className="auth-password-wrapper">
@@ -631,17 +724,23 @@ export default function EmployeeLogin() {
                         type={showResetPwd ? "text" : "password"}
                         value={resetForm.password}
                         onChange={(e) => {
-                          setResetForm((p) => ({ ...p, password: e.target.value }));
+                          setResetForm((p) => ({
+                            ...p,
+                            password: e.target.value,
+                          }));
                           setForgotError("");
                         }}
                         placeholder="Minimum 6 characters"
                         disabled={isResettingPwd}
                         autoFocus
+                        autoComplete="new-password"
                       />
                       <button
                         type="button"
                         className="auth-eye-btn"
-                        onClick={() => setShowResetPwd((v) => !v)}
+                        onClick={() =>
+                          setShowResetPwd((v) => !v)
+                        }
                         tabIndex={-1}
                       >
                         {showResetPwd ? "🙈" : "👁️"}
@@ -649,7 +748,7 @@ export default function EmployeeLogin() {
                     </div>
                   </div>
 
-                  {/* Strength meter */}
+                  {/* Strength Meter */}
                   {resetForm.password && (
                     <div className="auth-password-strength">
                       <div className="auth-strength-bars">
@@ -668,10 +767,10 @@ export default function EmployeeLogin() {
                       </div>
                       <span
                         style={{
-                          fontSize: "12px",
+                          fontSize: 12,
                           color: pwdStrength.color,
                           fontWeight: 600,
-                          minWidth: "70px",
+                          minWidth: 70,
                         }}
                       >
                         {pwdStrength.label}
@@ -679,50 +778,87 @@ export default function EmployeeLogin() {
                     </div>
                   )}
 
+                  {/* Confirm Password */}
                   <div className="auth-input-group">
                     <label>Confirm Password</label>
                     <div className="auth-password-wrapper">
                       <input
-                        type={showResetConfirm ? "text" : "password"}
+                        type={
+                          showResetConfirm ? "text" : "password"
+                        }
                         value={resetForm.confirm}
                         onChange={(e) => {
-                          setResetForm((p) => ({ ...p, confirm: e.target.value }));
+                          setResetForm((p) => ({
+                            ...p,
+                            confirm: e.target.value,
+                          }));
                           setForgotError("");
                         }}
                         placeholder="Re-enter new password"
                         disabled={isResettingPwd}
+                        autoComplete="new-password"
                         style={{
                           borderColor:
-                            resetForm.confirm && resetForm.password !== resetForm.confirm
+                            resetForm.confirm &&
+                            resetForm.password !==
+                              resetForm.confirm
                               ? "#dc2626"
-                              : resetForm.confirm && resetForm.password === resetForm.confirm
+                              : resetForm.confirm &&
+                                resetForm.password ===
+                                  resetForm.confirm
                               ? "#10b981"
                               : undefined,
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter")
+                            handleResetPassword();
                         }}
                       />
                       <button
                         type="button"
                         className="auth-eye-btn"
-                        onClick={() => setShowResetConfirm((v) => !v)}
+                        onClick={() =>
+                          setShowResetConfirm((v) => !v)
+                        }
                         tabIndex={-1}
                       >
                         {showResetConfirm ? "🙈" : "👁️"}
                       </button>
                     </div>
-                    {resetForm.confirm && resetForm.password !== resetForm.confirm && (
-                      <span style={{ fontSize: "12px", color: "#dc2626", marginTop: "4px" }}>
-                        Passwords do not match
-                      </span>
-                    )}
-                    {resetForm.confirm && resetForm.password === resetForm.confirm && (
-                      <span style={{ fontSize: "12px", color: "#10b981", marginTop: "4px" }}>
-                        ✓ Passwords match
-                      </span>
-                    )}
+                    {resetForm.confirm &&
+                      resetForm.password !==
+                        resetForm.confirm && (
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: "#dc2626",
+                            marginTop: 4,
+                            display: "block",
+                          }}
+                        >
+                          Passwords do not match
+                        </span>
+                      )}
+                    {resetForm.confirm &&
+                      resetForm.password ===
+                        resetForm.confirm && (
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: "#10b981",
+                            marginTop: 4,
+                            display: "block",
+                          }}
+                        >
+                          ✓ Passwords match
+                        </span>
+                      )}
                   </div>
 
                   {forgotError && (
-                    <div className="auth-error-msg" role="alert">{forgotError}</div>
+                    <div className="auth-error-msg" role="alert">
+                      {forgotError}
+                    </div>
                   )}
 
                   <div className="auth-popup-actions">
@@ -749,35 +885,52 @@ export default function EmployeeLogin() {
                         resetForm.password !== resetForm.confirm
                       }
                     >
-                      {isResettingPwd ? "Saving…" : "Reset Password"}
+                      {isResettingPwd
+                        ? "Updating…"
+                        : "Update Password"}
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* ── STEP 4: Success ── */}
+              {/* ════════════════════════════════════════════
+                  STEP 4 — SUCCESS
+                  Auto closes after 2.5s
+                  ════════════════════════════════════════════ */}
               {forgotStep === FORGOT_STEPS.SUCCESS && (
                 <div className="auth-popup-body auth-success-body">
-                  <div className="auth-success-animation">
-                    <div className="auth-success-circle">
-                      <div className="auth-success-check">✓</div>
-                    </div>
-                  </div>
-                  <h3 style={{ margin: "16px 0 8px", color: "#111b21", fontSize: "20px" }}>
-                    Password Reset Successfully!
-                  </h3>
-                  <p style={{ color: "#667781", margin: "0 0 20px", fontSize: "14px", lineHeight: 1.5 }}>
-                    Your password has been updated. You can now login
-                    with your new credentials.
-                  </p>
-                  <button
-                    type="button"
-                    className="auth-primary-btn"
-                    onClick={closeForgotPopup}
-                    style={{ width: "100%", maxWidth: "200px" }}
+                  <div className="auth-success-icon">✓</div>
+                  <h3
+                    style={{
+                      margin: "12px 0 6px",
+                      color: "#111b21",
+                      fontSize: 20,
+                      fontWeight: 800,
+                    }}
                   >
-                    Back to Login
-                  </button>
+                    Password Updated!
+                  </h3>
+                  <p
+                    style={{
+                      color: "#667781",
+                      margin: "0 0 20px",
+                      fontSize: 14,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Your password has been updated successfully.
+                    You can now login with your new credentials.
+                  </p>
+                  <div className="auth-popup-actions auth-popup-actions-center">
+                    <button
+                      type="button"
+                      className="auth-primary-btn"
+                      onClick={closeForgotPopup}
+                      style={{ maxWidth: 200 }}
+                    >
+                      Back to Login
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -785,6 +938,7 @@ export default function EmployeeLogin() {
         )}
       </div>
 
+      {/* ── App Loader ────────────────────────────────────── */}
       {isLoggingIn && (
         <AppLoader
           title="Signing you in…"
