@@ -956,9 +956,16 @@
 }
 
 /* Stage 1: The "Presents" Text */
+/* Stage 1: The "Presents" Text */
 .hollywood-presents {
   position: absolute;
   top: 42%;
+  left: 0;              /* Start from the left edge */
+  width: 100%;          /* Span the full width */
+  text-align: center;   /* Center the text inside the full width */
+  padding: 0 20px;      /* Add padding so it doesn't touch the screen edges */
+  box-sizing: border-box; /* Ensure padding doesn't push width beyond 100% */
+  
   color: #888888;
   font-family: inherit;
   font-size: 0.9rem;
@@ -969,6 +976,15 @@
   z-index: 2;
   /* Fades in, stays brief, fades out */
   animation: brightPresentsSequence 2.2s ease-in-out forwards;
+}
+
+@media (max-width: 480px) {
+  
+
+  .hollywood-presents {
+    font-size: 0.75rem;
+    letter-spacing: 4px; /* Reduced spacing so the long name fits better */
+  }
 }
 
 /* Stage 2: The Main Event */
